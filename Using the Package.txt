@@ -1,0 +1,4 @@
+from anfuelpriceenv import AnFuelpriceEnv
+
+   env = AnFuelpriceEnv()  # Instantiate the environment
+   # ... (Use the environment as before) ...
