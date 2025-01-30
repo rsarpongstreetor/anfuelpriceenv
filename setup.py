@@ -14,6 +14,6 @@ from setuptools import setup, find_packages
          ],
          include_package_data=True, # Include the DataDic.pt file
          package_data={
-            'anfuelpriceenv': ['DataDic()'],
+            'anfuelpriceenv': ['DataDic.pt'],
         },
      )
