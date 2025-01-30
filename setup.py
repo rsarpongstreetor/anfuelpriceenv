@@ -1,4 +1,5 @@
 from setuptools import setup, find_packages
+from DataDic.py import DataDicLoader  # Import the class
 
      setup(
          name='anfuelpriceenv',  # Package name
@@ -12,8 +13,12 @@ from setuptools import setup, find_packages
              'numpy',
              # Add other necessary packages
          ],
-         include_package_data=True, # Include the DataDic.pt file
-         package_data={
+          loader = DataDicLoader()  # Create an instance of the class
+          DataDic.pt= loader.load_data()  # Call the load_data method to load the data
+          
+          include_package_data=True, # Include the DataDic.pt file
+         
+          package_data={
             'anfuelpriceenv': ['DataDic.pt'],
         },
      )
