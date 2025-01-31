@@ -14,7 +14,33 @@ from torchrl.envs import (
 )
 from torchrl.envs.transforms.transforms import _apply_to_composite
 # Import DDataenv from DataDic.py
-from DataDic import DDataenv
+
+#anfuelpriceenv.py
+# Import dependencies
+import requests
+import torch
+import os
+from torchrl.envs.transforms.transforms import _apply_to_composite
+import pandas as pd
+
+
+# Download and load the data dictionary from the Google Drive link
+data_path = "https://drive.google.com/uc?id=1K7OBG-qZnVC4Sm7-zwLqIXTmNRLYe02e"
+response = requests.get(data_path)
+response.raise_for_status()  # Raise an exception for bad status codes
+
+with open("temp_file.pt", 'wb') as f:
+    f.write(response.content)
+
+with open("temp_file.pt", 'rb') as f:
+    # Load the entire file, including custom classes
+    DataDic = torch.load(f, weights_only=False, map_location=torch.device('cpu'))
+os.remove("temp_file.pt")
+
+# Access DDataenv from the loaded DataDic (assuming DDataenv is a key in DataDic)
+DDataenv = DataDic.get("DDataenv")
+
+# ... (rest of the code)
 
 
 from types import new_class
