@@ -32,10 +32,16 @@ response.raise_for_status()  # Raise an exception for bad status codes
 with open("temp_file.pt", 'wb') as f:
     f.write(response.content)
 
+
 with open("temp_file.pt", 'rb') as f:
-    # Load the entire file, including custom classes
-    DataDic = torch.load(f, weights_only=False, map_location=torch.device('cpu'))
-os.remove("temp_file.pt")
+  DataDic = torch.load(f, map_location=torch.device('cpu')) # Load the file as a dictionary
+  
+  if isinstance(DataDic, list) and len(DataDic) > 0 and isinstance(DataDic[0], dict):  
+    # Check if it's a list of dictionaries, and use the first one if so
+    DataDic = DataDic[0] 
+  elif not isinstance(DataDic, dict):
+    # If it's not a list or a dictionary, raise an error
+    raise ValueError("Loaded data is not a dictionary or a list of dictionaries.")
 
 # Access DDataenv from the loaded DataDic (assuming DDataenv is a key in DataDic)
 DDataenv = DataDic.get("DDataenv")
