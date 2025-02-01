@@ -42,7 +42,7 @@ with open("temp_file.pt", 'rb') as f:
 if not is_valid_data(DataDic):
     # If not valid, provide information about the data type
     data_type = type(DataDic)
-    raise ValueError(f"Loaded data is not a dictionary or a list of dictionaries. Actual type: {data_type}")
+    raise ValueError(f"Loaded data is not a dictionary, a list of dictionaries or a list. Actual type: {data_type}")
 
 os.remove("temp_file.pt")
 
