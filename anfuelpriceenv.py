@@ -30,6 +30,7 @@ import requests
 import torch
 
 
+
 data_path="https://drive.google.com/uc?id=1K7OBG-qZnVC4Sm7-zwLqIXTmNRLYe02e" #fixed the link
 
 response = requests.get(data_path)
@@ -39,18 +40,19 @@ with open("temp_file.pt", 'wb') as f:
   f.write(response.content)
 
 with open("temp_file.pt", 'rb') as f:
-  DataDic = torch.load(f) # removed weights_only, it's not a valid argument
-  # Check if DataDic is a list and try to access the dictionary element
-  if isinstance(DataDic, list) and len(DataDic) > 0 and isinstance(DataDic[0], dict):
-    DataDic = DataDic[0]  # Get the first element if it's a dictionary
-print(DataDic)
+  DataDic = torch.load(f, map_location=torch.device('cpu'))  # Load with map_location
+  # Assuming DDataenv is at index 0 in the list
+  DDataenv = DataDic[0] if isinstance(DataDic, list) and len(DataDic) > 0 else None
+  # Add a check to handle cases where DDataenv might not be present
+  if DDataenv is None:
+    print("Warning: DDataenv not found in the loaded data.")
 import os
 os.remove("temp_file.pt")
 
 
 
 # Access DDataenv from the loaded DataDic (assuming DDataenv is a key in DataDic)
-DDataenv = DataDic.get("DDataenv")
+DDataenv = DataDic.pd.read(DDataenv)
 
 # ... (rest of the code)
 
