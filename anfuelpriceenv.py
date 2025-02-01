@@ -93,9 +93,7 @@ def _step(tensordict):
     agent_reward_list=[]
     agent_action_list=[]
     agent_Date_list=[]
-    #expanded_agent_Date
-    #expanded_agent_new_obs1
-    #expanded_agent_reward1
+
 
 
 
@@ -105,52 +103,54 @@ def _step(tensordict):
         obs=torch.reshape(td['params','obsState&Fuel'].clone().detach(),(13,))
         reward=torch.reshape(td['params','rewardState&reward'].clone().detach(),(13,))
         action=torch.reshape(td['params','actionState&action'].clone().detach(),(13,))
-        Date=torch.reshape(td['params','Date'].clone().detach(),(1,))
+        Date=torch.tensor(td['params','Date'].clone().detach())
         new_obs = torch.add(obs, torch.stack([action_i * reward_i for action_i, reward_i in zip(action, reward)]))
         new_obs=torch.reshape(new_obs,(13,))
 
 
         agent_new_obs_list.append(new_obs)
         agent_reward_list.append(reward)
+
         agent_Date_list.append(Date)
-        agent_action_list.append(action)
 
 
 
     agent_new_obs = torch.stack(agent_new_obs_list, dim=0) # shape: [n_agents, 13, 1]
     agent_reward = torch.stack(agent_reward_list, dim=0)
+
     agent_Date= torch.stack(agent_Date_list, dim=0)
-    agent_action = torch.stack(agent_action_list, dim=0)
 
 
-    #agent_reward = agent_reward.reshape(*agent_reward.shape)
-    # Now you can safely expand with convo_dim along the middle dimension
+
 
 
     #Convolution Expansions
     expanded_agent_new_obs = agent_new_obs.reshape(1, 13, 1, 1).expand( 1, 13, *env.convo_dim)
-    expanded_agent_reward = agent_reward[:,4:].reshape(agent_reward.shape[0], 9, 1, 1).expand(n_agents, 9, *env.convo_dim)
-    expanded_agent_action=  agent_action[:,4:].reshape(agent_action.shape[0], 9, 1, 1).expand(n_agents, 9, *env.convo_dim)
-    expanded_agent_Date = agent_Date[:,:].reshape(agent_Date.shape[0], 1, 1, 1).expand(n_agents, 1, *env.convo_dim)  # Reshape to (1, 1, 1, 1)
 
+
+
+
+
+    agent_reward = agent_reward.reshape(*agent_reward.shape)
+    # Now you can safely expand with convo_dim along the middle dimension
+    expanded_agent_reward = agent_reward[:,4:].reshape(agent_reward.shape[0], 9, 1, 1).expand(agent_reward.shape[0], 9, *env.convo_dim)
+
+
+
+    expanded_agent_Date = agent_Date.expand(*agent_Date.shape,*env.convo_dim)
 
 
 
     #Batch Expansion
-
-    expanded_agent_new_obs1=expanded_agent_new_obs.expand(*env.batch_size, *expanded_agent_new_obs.shape)
     expanded_agent_reward1=expanded_agent_reward.expand(*env.batch_size,*expanded_agent_reward.shape)
-    expanded_agent_action1=expanded_agent_action.expand(*env.batch_size,*expanded_agent_action.shape)
+    expanded_agent_new_obs1=expanded_agent_new_obs.expand(*env.batch_size, *expanded_agent_new_obs.shape)
     expanded_agent_Date1 = expanded_agent_Date.expand(*env.batch_size, *expanded_agent_Date.shape)
 
-
+    episode_reward=expanded_agent_reward1
     observation=expanded_agent_new_obs1
     Date=expanded_agent_Date1
     reward = expanded_agent_reward1
-    action=expanded_agent_action1
-
  # Adjust slicing if necessary
-   
 
 
 
@@ -161,7 +161,7 @@ def _step(tensordict):
         "agents": {
             "observation":{"observat":observation,"position_key": Date},
             "reward": reward,
-          #  "action": action,
+           # "action": action,
         },
         "terminated": dones.clone(),
 
@@ -214,16 +214,15 @@ def _reset(self, tensordict=None, **kwargs):
        agent_obs_tensor = torch.stack(agent_obs_list, dim=0)
        agent_Date_tensor = torch.stack(agent_Date_list, dim=0).float()
 
-       agent_obs_tensor=agent_obs_tensor.float() # Added unsqueeze to add a new dimension
+       agent_obs_tensor=agent_obs_tensor .float().squeeze(-1) # Added unsqueeze to add a new dimension
 
 
        agent_obs_tensor = agent_obs_tensor.reshape(agent_obs_tensor.shape[0], agent_obs_tensor.shape[1], 1, 1) # Adding dimensions for the convo_dim
        agent_obs_tensor = agent_obs_tensor.expand(agent_obs_tensor.shape[0], agent_obs_tensor.shape[1], *self.convo_dim) # Expand to include convo_dim
-       agent_Date_tensor = agent_Date_tensor.expand(agent_Date_tensor.shape[0], 1, *self.convo_dim) # Expand to include convo_dim
-       
+
        expanded_agent_obs_tensor = agent_obs_tensor.expand(*self.batch_size, *agent_obs_tensor.shape) # expand obs to match the batch size
-       # Adjust the expansion for expanded_agent_Date_tensor# Reshape and expand agent_Date_tensor to match expected shape
-       expanded_agent_Date_tensor = agent_Date_tensor.expand(*self.batch_size,*agent_Date_tensor.shape) # Reshape to (1, 1) and expand
+       expanded_agent_Date_tensor = agent_Date_tensor.expand(*self.batch_size, *agent_Date_tensor.shape,*self.convo_dim,) # expand obs to match the batch size with convo_dim
+
 
 
 
@@ -237,7 +236,6 @@ def _reset(self, tensordict=None, **kwargs):
         {
             "agents": {
                 "observation": {"observat": expanded_agent_obs_tensor, "position_key": expanded_agent_Date_tensor},
-
 
             },
             "terminated": dones.clone(),
@@ -270,8 +268,9 @@ def _make_spec(self, td_agents):
     Date_min=td_agents['params','Date_min'].clone().detach()
 
 
+
     for i in range(self.n_agents):
-        agent[i]["action_spec"] =  DiscreteTensorSpec(n=3,
+        agent[i]["action_spec"] =  DiscreteTensorSpec( n=3,
                                                      shape= tuple([dim for dim in self.batch_size] if self.batch_size else [1]) + (self.n_agents)+(13,1),
                                                      dtype=torch.float32),
 
@@ -281,16 +280,20 @@ def _make_spec(self, td_agents):
                                                      dtype=torch.float32),
 
 
-        agent[i]["observation_spec"]  = BoundedTensorSpec(low = obs_min[i],
+        agent[i]["observat_spec"]  = BoundedTensorSpec(low = obs_min[i],
                                                           high =obs_max[i],
                                                           shape= tuple([dim for dim in self.batch_size] if self.batch_size else [1]) + (self.n_agents)+(13,1),
                                                           dtype=torch.float32),
 
-       #
+        agent[i]["Date_spec"]  = BoundedTensorSpec(low = Date_min,
+                                                          high =Date_max,
+                                                          shape= tuple([dim for dim in self.batch_size] if self.batch_size else [1]) + (self.n_agents,1),
+                                                          dtype=torch.float32),
+
         action_specs.append(agent[i]["action_spec"])
         reward_specs.append(agent[i]["reward_spec"])
         observation_specs.append(agent[i]["observation_spec"])
-
+        Date_specs.append(agent[i]["Date_spec"])
 
 
 
@@ -326,7 +329,7 @@ def _make_spec_updated(self, td_agents):
     result00 = [obs_max for _ in range(self.n_agents)]
 
     expand_shape = (self.n_agents, 13, *self.convo_dim)  # Change here
-    expand_shape1 = (self.n_agents,1, *self.convo_dim)  # Change here
+    expand_shape1 = (self.n_agents, *self.convo_dim)  # Change here
 
 
 
@@ -348,10 +351,11 @@ def _make_spec_updated(self, td_agents):
 
 
 
+
+
     self.unbatched_action_spec = CompositeSpec(
-        {"agents": {"action": DiscreteTensorSpec(
-            n=3,
-                shape=result555.shape,  # Changed to 9 actions,
+        {"agents": {"action": DiscreteTensorSpec( n=3,
+                shape=result555.shape,
                 dtype=torch.float32,
             )}}
     )
@@ -394,7 +398,6 @@ def _make_spec_updated(self, td_agents):
     ).to(self.device)
 
      # Expanded batch size should match env.batch_size
-
     expanded_batch_size = tuple([dim for dim in self.batch_size] if self.batch_size else [1])
     self.action_spec = self.unbatched_action_spec.expand(
         *expanded_batch_size  # Remove *self.unbatched_action_spec.shape
@@ -431,7 +434,7 @@ def gen_params(batch_size=torch.Size()) -> TensorDictBase:
     if batch_size is None:
       batch_size = []
      #Instantiate the environment with your data
-    data_path ='/content/drive/MyDrive/deep learning codes/EIAAPI_DOWNLOAD/solutions/mergedata/DataDic.pt'  # Replace with your actual data path
+    data_path = '/content/drive/MyDrive/deep learning codes/EIAAPI_DOWNLOAD/solutions/mergedata/DataDic.pt'  # Replace with your actual data path
     data_columns = ['Forex','WTI','Brent','OPEC','Fuelprice5','Fuelprice6','Fuelprice7','Fuelprice8','Fuelprice9','Fuelprice10','Fuelprice11','Fuelprice12','Fuelprice13',
                           'reward0','reward1','reward2','reward3','reward4','reward5','reward6','reward7','reward8','reward9','reward10','reward11','reward12',
                           'action0','action1','action2','action3','action4','action5','action6','action7','action8','action9','action10','action11','action12','Date']  # Add all your column names
@@ -442,13 +445,15 @@ def gen_params(batch_size=torch.Size()) -> TensorDictBase:
 
     if batch_size:
         # Assuming 'ac' is a dictionary of tensors, expand each tensor
-       ac = {k: v.clone().detach().expand(*batch_size, *v.shape)  for k, v in ac.items()} # Convert lists to tensors before expanding
+      ac = {k: torch.tensor(v).expand(*batch_size, *torch.tensor(v).shape)  for k, v in ac.items()} # Convert lists to tensors before expanding
+
 
     td = TensorDict({
 
-        "params": ac,
-          },
-    batch_size=batch_size,
+          "params": ac,
+          }
+        ,
+        batch_size=batch_size,
         device=torch.device("cpu" if torch.cuda.is_available() else "cpu"),
     )
     if batch_size:
@@ -473,7 +478,7 @@ class AnFuelpriceEnv(EnvBase):
         "render_fps": 30,
     }
     batch_locked = False
-    def __init__(self,td_params=None, seed=None, device="cpu",):
+    def __init__(self,td_params=None, seed=None, device="cpu"):
         if td_params is None:
            td_params = self.gen_params()
 
@@ -527,5 +532,3 @@ print("reward_spec:", env.reward_spec)
 td = env.reset()
 print("reset tensordict", td)
 check_env_specs(env)
-
-
