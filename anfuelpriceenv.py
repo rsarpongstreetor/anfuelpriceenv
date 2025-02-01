@@ -45,16 +45,15 @@ response.raise_for_status()
 with open("temp_file.pt", 'wb') as f:
   f.write(response.content)
 
-with open("temp_file.pt", 'rb') as f:
-  # Assuming your saved data is a dictionary and contains a key 'DDataenv'
-  loaded_data = torch.load(f)  # Load the entire file as a dictionary
-  # Access DDataenv from the loaded dictionary
-  DDataenv = loaded_data.get('DDataenv', None)  # Get 'DDataenv' value, defaulting to None if not found
-  if DDataenv is not None:
-    DDataenv = pd.DataFrame(DDataenv)
-  else:
-    print("Warning: 'DDataenv' not found in the loaded data.")
+if isinstance(loaded_data, list) and isinstance(loaded_data[0], dict):
+    DDataenv = loaded_data[0].get('DDataenv', None) 
+else:
+    # Handle the case where the expected data structure is not found
+    DDataenv = None  # Or raise an exception
+    print("Warning: Expected data structure not found in DataDic.pt") 
 
+if DDataenv is not None:
+    DDataenv = pd.DataFrame(DDataenv)
 import os
 os.remove("temp_file.pt")
 
