@@ -23,25 +23,28 @@ import os
 from torchrl.envs.transforms.transforms import _apply_to_composite
 import pandas as pd
 
+def is_valid_data(data):
+    return isinstance(data, dict) or (isinstance(data, list) and all(isinstance(item, dict) for item in data))
 
 # Download and load the data dictionary from the Google Drive link
-data_path = "https://drive.google.com/uc?id=1K7OBG-qZnVC4Sm7-zwLqIXTmNRLYe02e"
+data_path="https://drive.google.com/uc?id=1K7OBG-qZnVC4Sm7-zwLqIXTmNRLYe02e" 
+
 response = requests.get(data_path)
-response.raise_for_status()  # Raise an exception for bad status codes
+response.raise_for_status() 
 
 with open("temp_file.pt", 'wb') as f:
     f.write(response.content)
 
-
 with open("temp_file.pt", 'rb') as f:
-  DataDic = torch.load(f, map_location=torch.device('cpu')) # Load the file as a dictionary
-  
-  if isinstance(DataDic, list) and len(DataDic) > 0 and isinstance(DataDic[0], dict):  
-    # Check if it's a list of dictionaries, and use the first one if so
-    DataDic = DataDic[0] 
-  elif not isinstance(DataDic, dict):
-    # If it's not a list or a dictionary, raise an error
-    raise ValueError("Loaded data is not a dictionary or a list of dictionaries.")
+    DataDic = torch.load(f)
+
+# Check if the loaded data is valid
+if not is_valid_data(DataDic):
+    # If not valid, provide information about the data type
+    data_type = type(DataDic)
+    raise ValueError(f"Loaded data is not a dictionary or a list of dictionaries. Actual type: {data_type}")
+
+os.remove("temp_file.pt")
 
 # Access DDataenv from the loaded DataDic (assuming DDataenv is a key in DataDic)
 DDataenv = DataDic.get("DDataenv")
