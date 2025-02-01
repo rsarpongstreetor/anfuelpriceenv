@@ -52,7 +52,7 @@ os.remove("temp_file.pt")
 
 
 # Access DDataenv from the loaded DataDic (assuming DDataenv is a key in DataDic)
-DDataenv =np.array(DDataenv)
+DDataenv =pd.DataFrame(DDataenv)
 DDataenv=DataDic(DDataenv)
 
 # ... (rest of the code)
