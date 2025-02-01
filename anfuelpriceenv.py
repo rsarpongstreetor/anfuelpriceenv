@@ -25,7 +25,7 @@ import pandas as pd
 
 def is_valid_data(data):
     return isinstance(data, dict) or (isinstance(data, list) and all(isinstance(item, dict) for item in data))
-
+from torchrl.envs.utils import check_env_specs # This line imports the missing function
 import requests
 import torch
 
