@@ -58,10 +58,6 @@ else:
     DDataenv = None
 if DDataenv is not None:
     DDataenv = pd.DataFrame(DDataenv)
-import os
-os.remove("temp_file.pt")
-
-# ... (rest of the code)
 
 
 from types import new_class
