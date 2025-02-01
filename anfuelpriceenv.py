@@ -36,15 +36,13 @@ with open("temp_file.pt", 'wb') as f:
     f.write(response.content)
 
 with open("temp_file.pt", 'rb') as f:
-    DataDic = torch.load(f)
-
-# Check if the loaded data is valid
-if not is_valid_data(DataDic):
-    # If not valid, provide information about the data type
+    DataDic = torch.load(f, map_location=torch.device('cpu'))  # Load with weights_only=False
+if not isinstance(DataDic, (dict, list)):
     data_type = type(DataDic)
-    raise ValueError(f"Loaded data is not a dictionary, a list of dictionaries or a list. Actual type: {data_type}")
+    raise ValueError(f"Loaded data is not a dictionary or a list. Actual type: {data_type}")
 
-os.remove("temp_file.pt")
+os.remove("temp_file.pt")  # Clean up the temporary file
+
 
 # Access DDataenv from the loaded DataDic (assuming DDataenv is a key in DataDic)
 DDataenv = DataDic.get("DDataenv")
