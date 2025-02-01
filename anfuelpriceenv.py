@@ -31,27 +31,31 @@ import torch
 
 
 
-data_path="https://drive.google.com/uc?id=1K7OBG-qZnVC4Sm7-zwLqIXTmNRLYe02e" #fixed the link
 
-response = requests.get(data_path)
-response.raise_for_status() # Raise an exception for bad status codes
+def load_data(data_path="https://drive.google.com/uc?id=1K7OBG-qZnVC4Sm7-zwLqIXTmNRLYe02e"):
+  """Loads data from the specified path."""
+  response = requests.get(data_path)
+  response.raise_for_status()  # Raise an exception for bad status codes
 
-with open("temp_file.pt", 'wb') as f:
-  f.write(response.content)
+  with open("temp_file.pt", 'wb') as f:
+    f.write(response.content)
 
-response = requests.get(data_path)
-response.raise_for_status() 
+  with open("temp_file.pt", 'rb') as f:
+    loaded_data = torch.load(f)  # Load the data
+  
+  import os
+  os.remove("temp_file.pt")
+  return loaded_data
 
-with open("temp_file.pt", 'wb') as f:
-  f.write(response.content)
+# ... other code ...
 
-if isinstance(load_data, list) and isinstance(load_data[0], dict):
-    DDataenv = load_data[0].get('DDataenv', None) 
+# Call the load_data function to load the data
+loaded_data = load_data()
+
+if isinstance(loaded_data, list) and isinstance(loaded_data[0], dict):
+    DDataenv = loaded_data[0].get('DDataenv', None)
 else:
-    # Handle the case where the expected data structure is not found
-    DDataenv = None  # Or raise an exception
-    print("Warning: Expected data structure not found in DataDic.pt") 
-
+    DDataenv = None
 if DDataenv is not None:
     DDataenv = pd.DataFrame(DDataenv)
 import os
