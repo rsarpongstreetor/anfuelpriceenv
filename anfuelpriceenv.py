@@ -26,22 +26,27 @@ import pandas as pd
 def is_valid_data(data):
     return isinstance(data, dict) or (isinstance(data, list) and all(isinstance(item, dict) for item in data))
 
-# Download and load the data dictionary from the Google Drive link
-data_path="https://drive.google.com/uc?id=1K7OBG-qZnVC4Sm7-zwLqIXTmNRLYe02e" 
+import requests
+import torch
+
+
+data_path="https://drive.google.com/uc?id=1K7OBG-qZnVC4Sm7-zwLqIXTmNRLYe02e" #fixed the link
 
 response = requests.get(data_path)
-response.raise_for_status() 
+response.raise_for_status() # Raise an exception for bad status codes
 
 with open("temp_file.pt", 'wb') as f:
-    f.write(response.content)
+  f.write(response.content)
 
 with open("temp_file.pt", 'rb') as f:
-    DataDic = torch.load(f, map_location=torch.device('cpu'))  # Load with weights_only=False
-if not isinstance(DataDic, (dict, list)):
-    data_type = type(DataDic)
-    raise ValueError(f"Loaded data is not a dictionary or a list. Actual type: {data_type}")
+  DataDic = torch.load(f) # removed weights_only, it's not a valid argument
+  # Check if DataDic is a list and try to access the dictionary element
+  if isinstance(DataDic, list) and len(DataDic) > 0 and isinstance(DataDic[0], dict):
+    DataDic = DataDic[0]  # Get the first element if it's a dictionary
+print(DataDic)
+import os
+os.remove("temp_file.pt")
 
-os.remove("temp_file.pt")  # Clean up the temporary file
 
 
 # Access DDataenv from the loaded DataDic (assuming DDataenv is a key in DataDic)
