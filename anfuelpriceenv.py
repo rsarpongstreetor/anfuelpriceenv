@@ -55,8 +55,6 @@ loaded_data = load_data()
 if isinstance(loaded_data, list) and isinstance(loaded_data[0], dict):
     DDataenv = loaded_data[0].get('DDataenv', None)
 else:
-    DDataenv = None
-if DDataenv is not None:
     DDataenv = pd.DataFrame(DDataenv)
 
 
