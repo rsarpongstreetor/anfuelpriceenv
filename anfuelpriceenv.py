@@ -87,6 +87,7 @@ class DDataenv:
 
 
 from types import new_class
+from types import new_class
 def _step(tensordict):
     n_agents = env.n_agents
     agent_new_obs_list=[]
@@ -110,31 +111,32 @@ def _step(tensordict):
 
         agent_new_obs_list.append(new_obs)
         agent_reward_list.append(reward)
-
         agent_Date_list.append(Date)
+        agent_action_list.append(action)
 
 
+
+    
 
     agent_new_obs = torch.stack(agent_new_obs_list, dim=0) # shape: [n_agents, 13, 1]
     agent_reward = torch.stack(agent_reward_list, dim=0)
-
     agent_Date= torch.stack(agent_Date_list, dim=0)
+    agent_action = torch.stack(agent_action_list, dim=0)
 
 
 
 
 
     #Convolution Expansions
-    expanded_agent_new_obs = agent_new_obs.reshape(1, 13, 1, 1).expand( 1, 13, *env.convo_dim)
-
-
-
-
-
-    agent_reward = agent_reward.reshape(*agent_reward.shape)
+    
     # Now you can safely expand with convo_dim along the middle dimension
-    expanded_agent_reward = agent_reward[:,4:].reshape(agent_reward.shape[0], 9, 1, 1).expand(agent_reward.shape[0], 9, *env.convo_dim)
-
+   
+    expanded_agent_new_obs = agent_new_obs.reshape(1, 13, 1, 1).expand( 1, 13, *env.convo_dim)
+    expanded_agent_reward = agent_reward[:,4:].reshape(agent_reward.shape[0], 9, 1, 1).expand(n_agents, 9, *env.convo_dim)
+    expanded_agent_action=  agent_action[:,4:].reshape(agent_action.shape[0], 9, 1, 1).expand(n_agents, 9, *env.convo_dim)
+    expanded_agent_Date = agent_Date.reshape(agent_Date.shape[0], 1, 1, 1).expand(n_agents, 1, *env.convo_dim) 
+    print( expanded_agent_Date.shape)
+   
 
 
     expanded_agent_Date = agent_Date.expand(*agent_Date.shape,*env.convo_dim)
@@ -144,7 +146,11 @@ def _step(tensordict):
     #Batch Expansion
     expanded_agent_reward1=expanded_agent_reward.expand(*env.batch_size,*expanded_agent_reward.shape)
     expanded_agent_new_obs1=expanded_agent_new_obs.expand(*env.batch_size, *expanded_agent_new_obs.shape)
-    expanded_agent_Date1 = expanded_agent_Date.expand(*env.batch_size, *expanded_agent_Date.shape)
+   
+    expanded_agent_Date = agent_Date.reshape(agent_Date.shape[0], 1, 1, 1).expand(agent_Date.shape[0], 1, *env.convo_dim)
+    expanded_agent_Date1 = expanded_agent_Date.expand(*env.batch_size, *expanded_agent_Date.shape)  
+
+
 
     episode_reward=expanded_agent_reward1
     observation=expanded_agent_new_obs1
@@ -214,18 +220,24 @@ def _reset(self, tensordict=None, **kwargs):
        agent_obs_tensor = torch.stack(agent_obs_list, dim=0)
        agent_Date_tensor = torch.stack(agent_Date_list, dim=0).float()
 
-       agent_obs_tensor=agent_obs_tensor .float().squeeze(-1) # Added unsqueeze to add a new dimension
+      
+
+       agent_obs_tensor = torch.stack(agent_obs_list, dim=0).float()
+       agent_Date_tensor = torch.stack(agent_Date_list, dim=0).float()
+
+      
 
 
        agent_obs_tensor = agent_obs_tensor.reshape(agent_obs_tensor.shape[0], agent_obs_tensor.shape[1], 1, 1) # Adding dimensions for the convo_dim
        agent_obs_tensor = agent_obs_tensor.expand(agent_obs_tensor.shape[0], agent_obs_tensor.shape[1], *self.convo_dim) # Expand to include convo_dim
+       agent_Date_tensor =agent_Date_tensor.reshape(agent_Date_tensor.shape[0], agent_Date_tensor.shape[-1], 1, 1) # Adding dimensions for the convo_dim
+       agent_Date_tensor = agent_Date_tensor.expand(agent_Date_tensor.shape[0], 1, *self.convo_dim) # Expand to include convo_dim
 
+       
+       # Adjust the expansion for expanded_agent_Date_tensor# Reshape and expand agent_Date_tensor to match expected shape
+       expanded_agent_Date_tensor = agent_Date_tensor.expand(*self.batch_size,*agent_Date_tensor.shape) # Reshape to (1, 1) and expand
        expanded_agent_obs_tensor = agent_obs_tensor.expand(*self.batch_size, *agent_obs_tensor.shape) # expand obs to match the batch size
-       expanded_agent_Date_tensor = agent_Date_tensor.expand(*self.batch_size, *agent_Date_tensor.shape,*self.convo_dim,) # expand obs to match the batch size with convo_dim
-
-
-
-
+       print(expanded_agent_Date_tensor.shape)
 
 
 
@@ -329,25 +341,25 @@ def _make_spec_updated(self, td_agents):
     result00 = [obs_max for _ in range(self.n_agents)]
 
     expand_shape = (self.n_agents, 13, *self.convo_dim)  # Change here
-    expand_shape1 = (self.n_agents, *self.convo_dim)  # Change here
+    expand_shape1 = (self.n_agents, 1,*self.convo_dim)  # Change here
 
 
 
 
-    result555 = action_min.reshape(9).expand(self.n_agents, 9, *self.convo_dim)
-    result444 = action_max.reshape(9).expand(self.n_agents, 9, *self.convo_dim)
+    result555 = action_min.reshape(self.n_agents, 9, 1, 1).expand(self.n_agents, 9, *self.convo_dim)
+    result444 = action_max.reshape(self.n_agents, 9, 1, 1).expand(self.n_agents, 9, *self.convo_dim)
     # For obs/rewards that may have 13 features:
-    result333 = reward_min.reshape(9).expand(self.n_agents, 9, *self.convo_dim)
-    result222 = reward_max.reshape(9).expand(self.n_agents, 9, *self.convo_dim)
+    result333 = reward_min.reshape(self.n_agents, 9, 1, 1).expand(self.n_agents, 9, *self.convo_dim)
+    result222 = reward_max.reshape(self.n_agents, 9, 1, 1).expand(self.n_agents, 9, *self.convo_dim)
      # Reshape to (1, 13) and then expand to (n_agents, 13, *convo_dim)
-    result111 = obs_min.reshape(1, 13, 1, 1).expand(self.n_agents, 13, *self.convo_dim)
-    result000 = obs_max.reshape(1, 13, 1, 1).expand(self.n_agents, 13, *self.convo_dim)
+    result111 = obs_min.reshape(self.n_agents, 13, 1, 1).expand(self.n_agents, 13, *self.convo_dim)
+    result000 = obs_max.reshape(self.n_agents, 13, 1, 1).expand(self.n_agents, 13, *self.convo_dim)
 
 
 
      #Reshape tensors before expanding with the correct number of features
-    result777 = Date_max.expand(*expand_shape1)  # Use expand_shape for Date
-    result666 = Date_min.expand(*expand_shape1)  # Use expand_shape for Date
+    result777 = Date_max.reshape(self.n_agents, 1, 1, 1).expand(*expand_shape1)  # Use expand_shape for Date
+    result666 = Date_min.reshape(self.n_agents, 1, 1, 1).expand(*expand_shape1)  # Use expand_shape for Date
 
 
 
