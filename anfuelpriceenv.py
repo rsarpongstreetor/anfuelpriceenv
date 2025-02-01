@@ -431,7 +431,7 @@ def gen_params(batch_size=torch.Size()) -> TensorDictBase:
     if batch_size is None:
       batch_size = []
      #Instantiate the environment with your data
-    data_path ='https://drive.google.com/file/d/1K7OBG-qZnVC4Sm7-zwLqIXTmNRLYe02e/view?usp=drive_link'  # Replace with your actual data path
+    data_path ='/content/drive/MyDrive/deep learning codes/EIAAPI_DOWNLOAD/solutions/mergedata/DataDic.pt'  # Replace with your actual data path
     data_columns = ['Forex','WTI','Brent','OPEC','Fuelprice5','Fuelprice6','Fuelprice7','Fuelprice8','Fuelprice9','Fuelprice10','Fuelprice11','Fuelprice12','Fuelprice13',
                           'reward0','reward1','reward2','reward3','reward4','reward5','reward6','reward7','reward8','reward9','reward10','reward11','reward12',
                           'action0','action1','action2','action3','action4','action5','action6','action7','action8','action9','action10','action11','action12','Date']  # Add all your column names
