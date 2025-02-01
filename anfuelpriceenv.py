@@ -45,8 +45,8 @@ response.raise_for_status()
 with open("temp_file.pt", 'wb') as f:
   f.write(response.content)
 
-if isinstance(loaded_data, list) and isinstance(loaded_data[0], dict):
-    DDataenv = loaded_data[0].get('DDataenv', None) 
+if isinstance(load_data, list) and isinstance(load_data[0], dict):
+    DDataenv = load_data[0].get('DDataenv', None) 
 else:
     # Handle the case where the expected data structure is not found
     DDataenv = None  # Or raise an exception
