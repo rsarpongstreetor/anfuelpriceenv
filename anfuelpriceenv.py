@@ -30,32 +30,60 @@ import requests
 import torch
 
 
+class DDataenv:
+    def __init__(self, data_path: str, data_columns: List[str], data_type: Any = np.float32):
+        self.data_path = data_path
+        self.data_columns = data_columns
+        self.data_type = data_type
+        self.data = None
 
+    def load_data(self) -> pd.DataFrame:
+        with open(self.data_path, 'rb') as f:
+            self.data = torch.load(f, weights_only=False)
+            self.data = np.array(self.data)
+            # Check if the array has at least 3 dimensions
+        if len(self.data.shape) >= 3:
+            self.data = self.data.reshape(self.data.shape[1], self.data.shape[2])
+        else:
+            # Handle cases where the loaded data has fewer dimensions
+            # You might need to adjust this logic based on the actual structure of your data
+            print("Warning: Loaded data has fewer than 3 dimensions. Reshape skipped.")
 
-def load_data(data_path="https://drive.google.com/uc?id=1K7OBG-qZnVC4Sm7-zwLqIXTmNRLYe02e"):
-  """Loads data from the specified path."""
-  response = requests.get(data_path)
-  response.raise_for_status()  # Raise an exception for bad status codes
+        if not isinstance(self.data, pd.DataFrame):
+            self.data = pd.DataFrame(self.data, columns=self.data_columns)
+        self.data = np.array(self.data).reshape(self.data.shape[0], self.data.shape[1])
 
-  with open("temp_file.pt", 'wb') as f:
-    f.write(response.content)
+        if not isinstance(self.data, pd.DataFrame):
+            self.data = pd.DataFrame(self.data, columns=self.data_columns)
 
-  with open("temp_file.pt", 'rb') as f:
-    loaded_data = torch.load(f)  # Load the data
-  
-  import os
-  os.remove("temp_file.pt")
-  return loaded_data
+    def get_observation(self) -> TypingDict[str, Union[np.ndarray, TypingDict[str, float]]]:
+        if self.data is None:
+            self.load_data()
+        random_row_index = np.random.choice(self.data.shape[0], 1, replace=False)[0]
+        observation = self.data.iloc[random_row_index, :].to_numpy().astype(self.data_type)
+        describe_data = self.data.describe()
+        min_value = describe_data.loc['min']
+        max_value = describe_data.loc['max']
+        date_min = self.data['Date'].min() if np.issubdtype(self.data['Date'].dtype, np.number) else self.data['Date'].iloc[0]
+        date_max = self.data['Date'].max() if np.issubdtype(self.data['Date'].dtype, np.number) else self.data['Date'].iloc[-1]
 
-# ... other code ...
+        # Structure observation as a dictionary (concisely)
+        observation_dict = {
+            'obsState&Fuel': observation[0:13],
+            'Date': observation[-1],
+            'rewardState&reward': observation[13:26],
+            'actionState&action': observation[26:39],
+            'obsState&Fuel_max': max_value[0:13].values,
+            'obsState&Fuel_min': min_value[0:13].values,
+            'Date_max': date_max,
+            'Date_min': date_min,
+            'rewardState&reward_max': max_value[13:26].values,
+            'rewardState&reward_min': min_value[13:26].values,
+            'actionState&action_max': max_value[26:39].values,
+            'actionState&action_min': min_value[26:39].values,
+        }
+        return observation_dict
 
-# Call the load_data function to load the data
-loaded_data = load_data()
-
-if isinstance(loaded_data, list) and isinstance(loaded_data[0], dict):
-    DDataenv = loaded_data[0].get('DDataenv', None)
-else:
-    DDataenv = pd.DataFrame(DDataenv)
 
 
 from types import new_class
@@ -403,7 +431,7 @@ def gen_params(batch_size=torch.Size()) -> TensorDictBase:
     if batch_size is None:
       batch_size = []
      #Instantiate the environment with your data
-    data_path = '/content/drive/MyDrive/deep learning codes/EIAAPI_DOWNLOAD/solutions/mergedata/DataDic.pt'  # Replace with your actual data path
+    data_path = 'https://drive.google.com/uc?id=1K7OBG-qZnVC4Sm7-zwLqIXTmNRLYe02e'  # Replace with your actual data path
     data_columns = ['Forex','WTI','Brent','OPEC','Fuelprice5','Fuelprice6','Fuelprice7','Fuelprice8','Fuelprice9','Fuelprice10','Fuelprice11','Fuelprice12','Fuelprice13',
                           'reward0','reward1','reward2','reward3','reward4','reward5','reward6','reward7','reward8','reward9','reward10','reward11','reward12',
                           'action0','action1','action2','action3','action4','action5','action6','action7','action8','action9','action10','action11','action12','Date']  # Add all your column names
@@ -445,7 +473,7 @@ class AnFuelpriceEnv(EnvBase):
         "render_fps": 30,
     }
     batch_locked = False
-    def __init__(self,td_params=None, seed=None, device="cpu"):
+    def __init__(self,td_params=None, seed=None, device="cpu",):
         if td_params is None:
            td_params = self.gen_params()
 
