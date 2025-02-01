@@ -39,21 +39,24 @@ response.raise_for_status() # Raise an exception for bad status codes
 with open("temp_file.pt", 'wb') as f:
   f.write(response.content)
 
+response = requests.get(data_path)
+response.raise_for_status() 
+
+with open("temp_file.pt", 'wb') as f:
+  f.write(response.content)
+
 with open("temp_file.pt", 'rb') as f:
-  DataDic = torch.load(f, map_location=torch.device('cpu'))  # Load with map_location
-  # Assuming DDataenv is at index 0 in the list
-  DDataenv = DataDic[0] if isinstance(DataDic, list) and len(DataDic) > 0 else None
-  # Add a check to handle cases where DDataenv might not be present
-  if DDataenv is None:
-    print("Warning: DDataenv not found in the loaded data.")
+  # Assuming your saved data is a dictionary and contains a key 'DDataenv'
+  loaded_data = torch.load(f)  # Load the entire file as a dictionary
+  # Access DDataenv from the loaded dictionary
+  DDataenv = loaded_data.get('DDataenv', None)  # Get 'DDataenv' value, defaulting to None if not found
+  if DDataenv is not None:
+    DDataenv = pd.DataFrame(DDataenv)
+  else:
+    print("Warning: 'DDataenv' not found in the loaded data.")
+
 import os
 os.remove("temp_file.pt")
-
-
-
-# Access DDataenv from the loaded DataDic (assuming DDataenv is a key in DataDic)
-DDataenv =pd.DataFrame(DDataenv)
-DDataenv=DataDic(DDataenv)
 
 # ... (rest of the code)
 
