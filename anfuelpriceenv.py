@@ -529,12 +529,14 @@ class AnFuelpriceEnv(EnvBase):
     _step = staticmethod(_step)
     _set_seed = _set_seed
     def __getattr__(self, name):
-        try:
-            return super().__getattr__(name)  # Try to get the attribute from the parent class
-        except AttributeError:
-            # If the attribute is not found in the parent class, skip the error
-            print(f"Warning: Attribute '{name}' not found, skipping...")
-            return None  # Or return a default value if needed
+        if name == 'supports_continuous_actions':
+            # Check if the action space is continuous:
+            if isinstance(self.action_space, spaces.Box) and np.issubdtype(self.action_space.dtype, np.floating):
+                return True  
+            else:
+                return False
+        else:
+            pass
     #Define action_spec
     @property
     def action_spec(self):
@@ -550,8 +552,7 @@ class AnFuelpriceEnv(EnvBase):
               # Assuming discrete action space
             return DiscreteTensorSpec(n_actions=self.action_space.n)
         else:
-            raise NotImplementedError(f"Unsupported action space type: {type(self.action_space)}")    __getattr__=__getattr__
-
+            raise NotImplementedError(f"Unsupported action space type: {type(self.action_space)}")   
 env = AnFuelpriceEnv()
 print("\n*action_spec:", env.full_action_spec)
 print("\n*reward_spec:", env.full_reward_spec)
