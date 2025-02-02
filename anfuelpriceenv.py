@@ -489,10 +489,10 @@ def __getattr__(self, name):
             return True  
         else:
             return False
-    else:
+    #else:
         # Original: raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
         # Updated: Use super().__getattr__ to handle other attribute lookups
-        return super().__getattr__(name)
+       # return super().__getattr__(name)
     #Define action_spec
 @property
 def action_spec(self):
