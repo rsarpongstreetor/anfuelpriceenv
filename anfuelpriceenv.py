@@ -529,18 +529,12 @@ class AnFuelpriceEnv(EnvBase):
     _step = staticmethod(_step)
     _set_seed = _set_seed
     def __getattr__(self, name):
-        if name == 'supports_continuous_actions':
-                # Check if the action space is continuous:
-            if isinstance(self.action_space, spaces.Box) and np.issubdtype(self.action_space.dtype, np.floating):
-                return True  
-            else:
-                return False
-        elif name in dir(self): #If the specified attribute is found
-            return object.__getattribute__(self, name) #Retrieve the attribute
-    
-        else:
-            raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'") #Otherwise the attribute doesn't exist
-
+        try:
+            return super().__getattr__(name)  # Try to get the attribute from the parent class
+        except AttributeError:
+            # If the attribute is not found in the parent class, skip the error
+            print(f"Warning: Attribute '{name}' not found, skipping...")
+            return None  # Or return a default value if needed
     #Define action_spec
     @property
     def action_spec(self):
