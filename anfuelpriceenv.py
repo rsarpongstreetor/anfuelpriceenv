@@ -535,11 +535,11 @@ class AnFuelpriceEnv(EnvBase):
                 return True  
             else:
                 return False
-        elif:
-            # If the attribute is not found, raise an AttributeError
-            raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
+        elif name in dir(self): #If the specified attribute is found
+            return object.__getattribute__(self, name) #Retrieve the attribute
+    
         else:
-            pass
+            raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'") #Otherwise the attribute doesn't exist
 
     #Define action_spec
     @property
