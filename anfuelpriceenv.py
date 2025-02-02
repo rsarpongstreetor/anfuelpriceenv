@@ -526,9 +526,7 @@ class AnFuelpriceEnv(EnvBase):
     _reset = _reset
     _step = staticmethod(_step)
     _set_seed = _set_seed
-def supports_continuous_actions(self):
-    # Return True if your environment uses continuous actions, False otherwise
-    return False  # Assuming your environment has discrete actions
+
 env = AnFuelpriceEnv()
 print("\n*action_spec:", env.full_action_spec)
 print("\n*reward_spec:", env.full_reward_spec)
@@ -545,3 +543,45 @@ print("reward_spec:", env.reward_spec)
 td = env.reset()
 print("reset tensordict", td)
 check_env_specs(env)
+
+
+
+
+"""Vectorization& Abstracting features from VMAS   Using VMAS WRAPPING"""
+##############################################################################################################################################################
+from typing import Union, Optional
+import torch
+from torchrl.data import BoundedTensorSpec, CompositeSpec, UnboundedContinuousTensorSpec, DiscreteTensorSpec
+
+def make_env(
+    scenario: Union[str, "AnFuelpriceEnv"],
+    num_envs: int = 1,
+    device: Union[torch.device, str, int] = "cpu",
+    continuous_actions: bool = False,
+    wrapper: Optional["vmas.simulator.environment.Wrapper"] = True,
+    max_steps: Optional[int] = 20,
+    seed: Optional[int] = None,
+    dict_spaces: bool = False,
+    multidiscrete_actions: bool = True,
+    clamp_actions: bool = False,
+    grad_enabled: bool = False,
+    **kwargs  # Environment specific kwargs
+):
+    """
+    Create a vectorized environment with the specified configuration.
+
+    # ... (rest of the docstring)
+    """
+    # ... (rest of your code)
+    # Assuming observation_spec is defined in AnFuelpriceEnv
+    if isinstance(scenario, str):
+        scenario = AnFuelpriceEnv()  # Instantiate env if scenario is a string
+
+    # Assign observation_spec to the function
+    make_env.observation_spec = scenario.observation_spec
+
+    return scenario  # or some other appropriate environment
+
+# Call the function before accessing the attribute
+# Make sure to pass an appropriate 'scenario'
+env = make_env(scenario='your_scenario')  # Replace 'your_scenario' with an actual scenario
