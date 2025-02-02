@@ -1,3 +1,4 @@
+
 from typing import Dict as TypingDict, Any, Union, List, Optional
 import torch
 import numpy as np
@@ -28,6 +29,8 @@ def is_valid_data(data):
 from torchrl.envs.utils import check_env_specs # This line imports the missing function
 import requests
 import torch
+from gym import spaces  # Import spaces from gym
+
 
 
 class DDataenv:
@@ -522,6 +525,7 @@ class AnFuelpriceEnv(EnvBase):
         self.n_agents = 1
         self.convo_dim = [9, 9]
         self.batch_size = [10, 10]
+        self.action_space = spaces.Box(low=-1, high=1, shape=(3,), dtype=np.float32)
 
         self.unbatched_observation_spec = None
         self.unbatched_reward_spec = None
