@@ -474,8 +474,6 @@ def gen_params(batch_size=torch.Size()) -> TensorDictBase:
 
 
 
-
-
 def _set_seed(self, seed:45):
     rng = torch.manual_seed(seed)
     self.rng = rng
@@ -528,6 +526,9 @@ class AnFuelpriceEnv(EnvBase):
     _reset = _reset
     _step = staticmethod(_step)
     _set_seed = _set_seed
+def supports_continuous_actions(self):
+    # Return True if your environment uses continuous actions, False otherwise
+    return False  # Assuming your environment has discrete actions
 env = AnFuelpriceEnv()
 print("\n*action_spec:", env.full_action_spec)
 print("\n*reward_spec:", env.full_reward_spec)
