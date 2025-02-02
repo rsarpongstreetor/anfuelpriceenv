@@ -481,15 +481,15 @@ def _set_seed(self, seed:45):
     rng = torch.manual_seed(seed)
     self.rng = rng
     
-def __getattr__(self, continuous_actions):
-    if continuous_actions == 'supports_continuous_actions':
+def __getattr__(self, name):
+    if name == 'supports_continuous_actions':
             # Check if the action space is continuous:
         if isinstance(self.action_space, spaces.Box) and np.issubdtype(self.action_space.dtype, np.floating):
             return True  
         else:
             return False
     else:
-        raise AttributeError(f"'{type(self).__continuous_actions__}' object has no attribute '{continuous_actions}'")
+        raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
 
     #Define action_spec
 @property
