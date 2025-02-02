@@ -478,7 +478,7 @@ def _set_seed(self, seed:45):
     rng = torch.manual_seed(seed)
     self.rng = rng
     
- def __getattr__(self, name):
+def __getattr__(self, name):
     if name == 'supports_continuous_actions':
             # Check if the action space is continuous:
         if isinstance(self.action_space, spaces.Box) and np.issubdtype(self.action_space.dtype, np.floating):
