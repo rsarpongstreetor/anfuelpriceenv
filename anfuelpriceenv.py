@@ -484,14 +484,15 @@ def _set_seed(self, seed:45):
     
 def __getattr__(self, name):
     if name == 'supports_continuous_actions':
-        # Check if the action space is continuous:
+            # Check if the action space is continuous:
         if isinstance(self.action_space, spaces.Box) and np.issubdtype(self.action_space.dtype, np.floating):
-            return True
+            return True  
         else:
             return False
     else:
-        raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
-
+        # Original: raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
+        # Updated: Use super().__getattr__ to handle other attribute lookups
+        return super().__getattr__(name)
     #Define action_spec
 @property
 def action_spec(self):
