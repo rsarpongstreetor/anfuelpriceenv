@@ -481,15 +481,15 @@ def _set_seed(self, seed:45):
 
 def __getattr__(self, name):
     if name in ("action_keys", "reward_keys", "done_keys"):
-            return getattr(self, name)  # Access the defined attributes
-        if name == 'supports_continuous_actions':
+        return getattr(self, name)  # Access the defined attributes
+    if name == 'supports_continuous_actions':
                 # Check if the action space is continuous:
-            if isinstance(self.action_space, spaces.Box) and np.issubdtype(self.action_space.dtype, np.floating):
-                return True
-            else:
-                return False
+        if isinstance(self.action_space, spaces.Box) and np.issubdtype(self.action_space.dtype, np.floating):
+            return True
+        else:
+            return False
 
-        return super().__getattr__(name)  # Delegate to parent class
+    return super().__getattr__(name)  # Delegate to parent class
 
 #Define action_spec
     @property
