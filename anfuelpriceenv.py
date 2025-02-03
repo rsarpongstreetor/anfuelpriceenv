@@ -508,6 +508,9 @@ class AnFuelpriceEnv(EnvBase):
 
         self.agent_tds = []
         self.agents = [{} for _ in range(self.n_agents)]
+        self.supports_continuous_actions=False
+        self.render=False
+        
 
 
 
@@ -528,15 +531,7 @@ class AnFuelpriceEnv(EnvBase):
     _reset = _reset
     _step = staticmethod(_step)
     _set_seed = _set_seed
-    def __getattr__(self, name):
-        if name == 'supports_continuous_actions':
-            # Check if the action space is continuous:
-            if isinstance(self.action_space, spaces.Box) and np.issubdtype(self.action_space.dtype, np.floating):
-                return True  
-            else:
-                return False
-        else:
-            pass
+    
     #Define action_spec
     @property
     def action_spec(self):
