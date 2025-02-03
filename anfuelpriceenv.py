@@ -92,8 +92,8 @@ class DDataenv:
 
 from types import new_class
 from types import new_class
-def _step(tensordict):
-    n_agents = env.n_agents
+def _step(self, tensordict):
+    n_agents = self.n_agents
     agent_new_obs_list=[]
     agent_reward_list=[]
     agent_action_list=[]
@@ -135,24 +135,24 @@ def _step(tensordict):
     
     # Now you can safely expand with convo_dim along the middle dimension
    
-    expanded_agent_new_obs = agent_new_obs.reshape(1, 13, 1, 1).expand( 1, 13, *env.convo_dim)
-    expanded_agent_reward = agent_reward[:,4:].reshape(agent_reward.shape[0], 9, 1, 1).expand(n_agents, 9, *env.convo_dim)
-    expanded_agent_action=  agent_action[:,4:].reshape(agent_action.shape[0], 9, 1, 1).expand(n_agents, 9, *env.convo_dim)
-    expanded_agent_Date = agent_Date.reshape(agent_Date.shape[0], 1, 1, 1).expand(n_agents, 1, *env.convo_dim) 
+    expanded_agent_new_obs = agent_new_obs.reshape(1, 13, 1, 1).expand( 1, 13, *self.convo_dim)
+    expanded_agent_reward = agent_reward[:,4:].reshape(agent_reward.shape[0], 9, 1, 1).expand(n_agents, 9, *self.convo_dim)
+    expanded_agent_action=  agent_action[:,4:].reshape(agent_action.shape[0], 9, 1, 1).expand(n_agents, 9, *self.convo_dim)
+    expanded_agent_Date = agent_Date.reshape(agent_Date.shape[0], 1, 1, 1).expand(n_agents, 1, *self.convo_dim) 
     print( expanded_agent_Date.shape)
    
 
 
-    expanded_agent_Date = agent_Date.expand(*agent_Date.shape,*env.convo_dim)
+    expanded_agent_Date = agent_Date.expand(*agent_Date.shape,*self.convo_dim)
 
 
 
     #Batch Expansion
-    expanded_agent_reward1=expanded_agent_reward.expand(*env.batch_size,*expanded_agent_reward.shape)
-    expanded_agent_new_obs1=expanded_agent_new_obs.expand(*env.batch_size, *expanded_agent_new_obs.shape)
+    expanded_agent_reward1=expanded_agent_reward.expand(*self.batch_size,*expanded_agent_reward.shape)
+    expanded_agent_new_obs1=expanded_agent_new_obs.expand(*self.batch_size, *expanded_agent_new_obs.shape)
    
-    expanded_agent_Date = agent_Date.reshape(agent_Date.shape[0], 1, 1, 1).expand(agent_Date.shape[0], 1, *env.convo_dim)
-    expanded_agent_Date1 = expanded_agent_Date.expand(*env.batch_size, *expanded_agent_Date.shape)  
+    expanded_agent_Date = agent_Date.reshape(agent_Date.shape[0], 1, 1, 1).expand(agent_Date.shape[0], 1, *self.convo_dim)
+    expanded_agent_Date1 = expanded_agent_Date.expand(*self.batch_size, *expanded_agent_Date.shape)  
 
 
 
@@ -166,7 +166,7 @@ def _step(tensordict):
 
 
 
-    dones = torch.zeros((*env.batch_size,1), dtype=torch.bool)
+    dones = torch.zeros((*self.batch_size,1), dtype=torch.bool)
     nextt = TensorDict({
         "agents": {
             "observation":{"observat":observation,"position_key": Date},
@@ -175,7 +175,7 @@ def _step(tensordict):
         },
         "terminated": dones.clone(),
 
-    }, batch_size=env.batch_size, device=env.device)
+    }, batch_size=self.batch_size, device=env.device)
     return nextt
 
 def _reset(self, tensordict=None, **kwargs):
@@ -442,7 +442,7 @@ def make_composite_from_td(td):
     return composite
 
 
-def gen_params(batch_size=torch.Size()) -> TensorDictBase:
+def gen_params(self,batch_size=torch.Size()) -> TensorDictBase:
     """Returns a ``tensordict`` containing the input tensors."""
     if batch_size is None:
       batch_size = []
@@ -458,7 +458,7 @@ def gen_params(batch_size=torch.Size()) -> TensorDictBase:
 
     if batch_size:
         # Assuming 'ac' is a dictionary of tensors, expand each tensor
-      ac = {k: torch.tensor(v).expand(*batch_size, *torch.tensor(v).shape)  for k, v in ac.items()} # Convert lists to tensors before expanding
+      ac = {k: torch.tensor(v).expand(*self.batch_size, *torch.tensor(v).shape)  for k, v in ac.items()} # Convert lists to tensors before expanding
 
 
     td = TensorDict({
@@ -466,7 +466,7 @@ def gen_params(batch_size=torch.Size()) -> TensorDictBase:
           "params": ac,
           }
         ,
-        batch_size=batch_size,
+        batch_size=self.batch_size,
         device=torch.device("cpu" if torch.cuda.is_available() else "cpu"),
     )
     if batch_size:
@@ -552,12 +552,12 @@ class AnFuelpriceEnv(EnvBase):
         self.set_seed(seed)
 
     # Helpers: _make_step and gen_params
-    gen_params =staticmethod(gen_params)
+    gen_params =gen_params
     _make_spec = _make_spec_updated  # w
 
     # Mandatory methods: _step, _reset and _set_seed
     _reset = _reset
-    _step = staticmethod(_step)
+    _step = _step
     _set_seed = _set_seed
     __getattr__=__getattr__
     
