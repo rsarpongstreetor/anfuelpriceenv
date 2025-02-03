@@ -515,9 +515,7 @@ class AnFuelpriceEnv(EnvBase):
     }
     batch_locked = False
     def __init__(self,td_params=None, seed=None, device="cpu"):
-        if td_params is None:
-           td_params = self.gen_params()
-
+       
 
         # Extract the variables needed in _make_spec
         self.n_agents = 1
@@ -546,7 +544,11 @@ class AnFuelpriceEnv(EnvBase):
 
 
         super().__init__(device=device, batch_size=[10,10])
+        if td_params is None:
+            td_params = self.gen_params()
+
         self._make_spec(td_params)
+        
         if seed is None:
             seed = torch.empty((), dtype=torch.int64).random_().item()
         self.set_seed(seed)
