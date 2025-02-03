@@ -493,20 +493,20 @@ def __getattr__(self, name):
 
 #Define action_spec
     @property
-def action_spec(self):
-    if isinstance(self.action_space, spaces.Box):
-              # Assuming continuous action space, adjust bounds as needed
-        return BoundedTensorSpec(
-            low=torch.tensor(self.action_space.low),
-            high=torch.tensor(self.action_space.high),
-            dtype=torch.float32,
-            shape=self.action_space.shape
-        )
-    elif isinstance(self.action_space, spaces.Discrete):
-              # Assuming discrete action space
-        return DiscreteTensorSpec(n_actions=self.action_space.n)
-    else:
-        raise NotImplementedError(f"Unsupported action space type: {type(self.action_space)}")       
+    def action_spec(self):
+        if isinstance(self.action_space, spaces.Box):
+                  # Assuming continuous action space, adjust bounds as needed
+           return BoundedTensorSpec(
+                low=torch.tensor(self.action_space.low),
+                high=torch.tensor(self.action_space.high),
+                dtype=torch.float32,
+                shape=self.action_space.shape
+            )
+        elif isinstance(self.action_space, spaces.Discrete):
+                  # Assuming discrete action space
+             return DiscreteTensorSpec(n_actions=self.action_space.n)
+        else:
+            raise NotImplementedError(f"Unsupported action space type: {type(self.action_space)}")       
 
 class AnFuelpriceEnv(EnvBase):
     metadata = {
