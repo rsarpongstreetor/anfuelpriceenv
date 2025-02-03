@@ -486,32 +486,8 @@ def _set_seed(self, seed:45):
     rng = torch.manual_seed(seed)
     self.rng = rng
     
-def __getattr__(self, name):
-    if name == 'supports_continuous_actions':
-            # Check if the action space is continuous:
-        if isinstance(self.action_space, spaces.Box) and np.issubdtype(self.action_space.dtype, np.floating):
-            return True  
-        else:
-            return False
-    else:
-        raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
 
-    #Define action_spec
-@property
-def action_spec(self):
-    if isinstance(self.action_space, spaces.Box):
-          # Assuming continuous action space, adjust bounds as needed
-        return BoundedTensorSpec(
-            low=torch.tensor(self.action_space.low),
-            high=torch.tensor(self.action_space.high),
-            dtype=torch.float32,
-            shape=self.action_space.shape
-        )
-    elif isinstance(self.action_space, spaces.Discrete):
-          # Assuming discrete action space
-        return DiscreteTensorSpec(n_actions=self.action_space.n)
-    else:
-        raise NotImplementedError(f"Unsupported action space type: {type(self.action_space)}")
+
 
 
 
@@ -560,7 +536,7 @@ class AnFuelpriceEnv(EnvBase):
     _reset = _reset
     _step = staticmethod(_step)
     _set_seed = _set_seed
-    __getattr__=__getattr__
+   
 
 env = AnFuelpriceEnv()
 print("\n*action_spec:", env.full_action_spec)
@@ -582,22 +558,7 @@ check_env_specs(env)
 
     
     
-env = AnFuelpriceEnv()
-print("\n*action_spec:", env.full_action_spec)
-print("\n*reward_spec:", env.full_reward_spec)
-print("\n*done_spec:", env.full_done_spec)
-print("\n*observation_spec:", env.observation_spec)
 
-print("\n-action_keys:", env.action_keys)
-print("\n-reward_keys:", env.reward_keys)
-print("\n-done_keys:", env.done_keys)
-
-print("input_spec:", env.input_spec)
-print("action_spec (as defined by input_spec):", env.action_spec)
-print("reward_spec:", env.reward_spec)
-td = env.reset()
-print("reset tensordict", td)
-check_env_specs(env)
 
 """Vectorization& Abstracting features from VMAS   Using VMAS WRAPPING"""
 ##############################################################################################################################################################
