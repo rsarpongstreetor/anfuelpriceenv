@@ -92,8 +92,12 @@ class DDataenv:
 
 from types import new_class
 from types import new_class
-def _step(self, tensordict):
-    n_agents = self.n_agents
+
+
+from types import new_class
+from types import new_class
+def _step(tensordict):
+    n_agents = env.n_agents
     agent_new_obs_list=[]
     agent_reward_list=[]
     agent_action_list=[]
@@ -135,24 +139,24 @@ def _step(self, tensordict):
     
     # Now you can safely expand with convo_dim along the middle dimension
    
-    expanded_agent_new_obs = agent_new_obs.reshape(1, 13, 1, 1).expand( 1, 13, *self.convo_dim)
-    expanded_agent_reward = agent_reward[:,4:].reshape(agent_reward.shape[0], 9, 1, 1).expand(n_agents, 9, *self.convo_dim)
-    expanded_agent_action=  agent_action[:,4:].reshape(agent_action.shape[0], 9, 1, 1).expand(n_agents, 9, *self.convo_dim)
-    expanded_agent_Date = agent_Date.reshape(agent_Date.shape[0], 1, 1, 1).expand(n_agents, 1, *self.convo_dim) 
+    expanded_agent_new_obs = agent_new_obs.reshape(1, 13, 1, 1).expand( 1, 13, *env.convo_dim)
+    expanded_agent_reward = agent_reward[:,4:].reshape(agent_reward.shape[0], 9, 1, 1).expand(n_agents, 9, *env.convo_dim)
+    expanded_agent_action=  agent_action[:,4:].reshape(agent_action.shape[0], 9, 1, 1).expand(n_agents, 9, *env.convo_dim)
+    expanded_agent_Date = agent_Date.reshape(agent_Date.shape[0], 1, 1, 1).expand(n_agents, 1, *env.convo_dim) 
     print( expanded_agent_Date.shape)
    
 
 
-    expanded_agent_Date = agent_Date.expand(*agent_Date.shape,*self.convo_dim)
+    expanded_agent_Date = agent_Date.expand(*agent_Date.shape,*env.convo_dim)
 
 
 
     #Batch Expansion
-    expanded_agent_reward1=expanded_agent_reward.expand(*self.batch_size,*expanded_agent_reward.shape)
-    expanded_agent_new_obs1=expanded_agent_new_obs.expand(*self.batch_size, *expanded_agent_new_obs.shape)
+    expanded_agent_reward1=expanded_agent_reward.expand(*env.batch_size,*expanded_agent_reward.shape)
+    expanded_agent_new_obs1=expanded_agent_new_obs.expand(*env.batch_size, *expanded_agent_new_obs.shape)
    
-    expanded_agent_Date = agent_Date.reshape(agent_Date.shape[0], 1, 1, 1).expand(agent_Date.shape[0], 1, *self.convo_dim)
-    expanded_agent_Date1 = expanded_agent_Date.expand(*self.batch_size, *expanded_agent_Date.shape)  
+    expanded_agent_Date = agent_Date.reshape(agent_Date.shape[0], 1, 1, 1).expand(agent_Date.shape[0], 1, *env.convo_dim)
+    expanded_agent_Date1 = expanded_agent_Date.expand(*env.batch_size, *expanded_agent_Date.shape)  
 
 
 
@@ -166,7 +170,7 @@ def _step(self, tensordict):
 
 
 
-    dones = torch.zeros((*self.batch_size,1), dtype=torch.bool)
+    dones = torch.zeros((*env.batch_size,1), dtype=torch.bool)
     nextt = TensorDict({
         "agents": {
             "observation":{"observat":observation,"position_key": Date},
@@ -175,7 +179,7 @@ def _step(self, tensordict):
         },
         "terminated": dones.clone(),
 
-    }, batch_size=self.batch_size, device=env.device)
+    }, batch_size=env.batch_size, device=env.device)
     return nextt
 
 def _reset(self, tensordict=None, **kwargs):
@@ -415,16 +419,19 @@ def _make_spec_updated(self, td_agents):
 
      # Expanded batch size should match env.batch_size
     expanded_batch_size = tuple([dim for dim in self.batch_size] if self.batch_size else [1])
-    _action_spec = self.unbatched_action_spec.expand(*expanded_batch_size).to(self.device)
-
-    _observation_spec = self.unbatched_observation_spec.expand(*expanded_batch_size).to(self.device)
-
-    _reward_spec = self.unbatched_reward_spec.expand(*expanded_batch_size).to(self.device)
-
-    _done_spec = self.unbatched_done_spec.expand(*expanded_batch_size).to(self.device)
-    
-    # Return the calculated specs
-    return _action_spec, _observation_spec, _reward_spec, _done_spec
+    self.action_spec = self.unbatched_action_spec.expand(
+        *expanded_batch_size  # Remove *self.unbatched_action_spec.shape
+    ).to(self.device)
+    self.observation_spec = self.unbatched_observation_spec.expand(
+        *expanded_batch_size  # Remove *self.unbatched_observation_spec.shape
+    ).to(self.device)
+    self.reward_spec = self.unbatched_reward_spec.expand(
+        *expanded_batch_size  # Use expanded_batch_size for reward_spec as well
+    ).to(self.device)
+    self.done_spec = self.unbatched_done_spec.expand(
+        *expanded_batch_size  # Use expanded_batch_size for done_spec as well
+    ).to(self.device)
+    return self.action_spec, self.observation_spec, self.reward_spec, self.done_spec
 def make_composite_from_td(td):
     # custom function to convert a ``tensordict`` in a similar spec structure
     # of unbounded values.
@@ -442,10 +449,10 @@ def make_composite_from_td(td):
     return composite
 
 
-def gen_params(self,batch_size=torch.Size()) -> TensorDictBase:
+def gen_params(batch_size=torch.Size()) -> TensorDictBase:
     """Returns a ``tensordict`` containing the input tensors."""
     if batch_size is None:
-      batch_size = self.batch_size
+      batch_size = []
      #Instantiate the environment with your data
     data_path = '/content/drive/MyDrive/deep learning codes/EIAAPI_DOWNLOAD/solutions/mergedata/DataDic.pt'  # Replace with your actual data path
     data_columns = ['Forex','WTI','Brent','OPEC','Fuelprice5','Fuelprice6','Fuelprice7','Fuelprice8','Fuelprice9','Fuelprice10','Fuelprice11','Fuelprice12','Fuelprice13',
@@ -458,8 +465,7 @@ def gen_params(self,batch_size=torch.Size()) -> TensorDictBase:
 
     if batch_size:
         # Assuming 'ac' is a dictionary of tensors, expand each tensor
-      
-      ac = {k: torch.tensor(v).expand(*batch_size, *torch.tensor(v).shape) if isinstance(v, (list, np.ndarray)) else torch.tensor(v) for k, v in ac.items()}
+      ac = {k: torch.tensor(v).expand(*batch_size, *torch.tensor(v).shape)  for k, v in ac.items()} # Convert lists to tensors before expanding
 
 
     td = TensorDict({
@@ -470,7 +476,8 @@ def gen_params(self,batch_size=torch.Size()) -> TensorDictBase:
         batch_size=batch_size,
         device=torch.device("cpu" if torch.cuda.is_available() else "cpu"),
     )
-    
+    if batch_size:
+      td = td.expand(batch_size).contiguous()
     return td
 
 
@@ -478,35 +485,35 @@ def gen_params(self,batch_size=torch.Size()) -> TensorDictBase:
 def _set_seed(self, seed:45):
     rng = torch.manual_seed(seed)
     self.rng = rng
-
+    
 def __getattr__(self, name):
-    if name in ("action_keys", "reward_keys", "done_keys"):
-        return getattr(self, name)  # Access the defined attributes
     if name == 'supports_continuous_actions':
-                # Check if the action space is continuous:
+            # Check if the action space is continuous:
         if isinstance(self.action_space, spaces.Box) and np.issubdtype(self.action_space.dtype, np.floating):
-            return True
+            return True  
         else:
             return False
+    else:
+        raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
 
-    return super().__getattr__(name)  # Delegate to parent class
+    #Define action_spec
+@property
+def action_spec(self):
+    if isinstance(self.action_space, spaces.Box):
+          # Assuming continuous action space, adjust bounds as needed
+        return BoundedTensorSpec(
+            low=torch.tensor(self.action_space.low),
+            high=torch.tensor(self.action_space.high),
+            dtype=torch.float32,
+            shape=self.action_space.shape
+        )
+    elif isinstance(self.action_space, spaces.Discrete):
+          # Assuming discrete action space
+        return DiscreteTensorSpec(n_actions=self.action_space.n)
+    else:
+        raise NotImplementedError(f"Unsupported action space type: {type(self.action_space)}")
 
-#Define action_spec
-    @property
-    def action_spec(self):
-        if isinstance(self.action_space, spaces.Box):
-                  # Assuming continuous action space, adjust bounds as needed
-           return BoundedTensorSpec(
-                low=torch.tensor(self.action_space.low),
-                high=torch.tensor(self.action_space.high),
-                dtype=torch.float32,
-                shape=self.action_space.shape
-            )
-        elif isinstance(self.action_space, spaces.Discrete):
-                  # Assuming discrete action space
-             return DiscreteTensorSpec(n_actions=self.action_space.n)
-        else:
-            raise NotImplementedError(f"Unsupported action space type: {type(self.action_space)}")       
+
 
 class AnFuelpriceEnv(EnvBase):
     metadata = {
@@ -514,14 +521,10 @@ class AnFuelpriceEnv(EnvBase):
         "render_fps": 30,
     }
     batch_locked = False
-
-    
-
-    
     def __init__(self,td_params=None, seed=None, device="cpu"):
+        if td_params is None:
+           td_params = self.gen_params()
 
-        
-       
 
         # Extract the variables needed in _make_spec
         self.n_agents = 1
@@ -537,10 +540,6 @@ class AnFuelpriceEnv(EnvBase):
 
         self.agent_tds = []
         self.agents = [{} for _ in range(self.n_agents)]
-        self.supports_continuous_actions=False
-        self.render=False
-        
-        
 
 
 
@@ -548,26 +547,39 @@ class AnFuelpriceEnv(EnvBase):
 
 
         super().__init__(device=device, batch_size=[10,10])
-        if td_params is None:
-            td_params = self.gen_params()
-
         self._make_spec(td_params)
-        
         if seed is None:
             seed = torch.empty((), dtype=torch.int64).random_().item()
         self.set_seed(seed)
-        self.action_keys = ["agents", "action"]  # Define action_keys here
-        self.reward_keys = ["agents", "reward"]  # Define reward_keys here
-        self.done_keys = ["terminated"]
+
     # Helpers: _make_step and gen_params
-    gen_params =gen_params
+    gen_params =staticmethod(gen_params)
     _make_spec = _make_spec_updated  # w
 
     # Mandatory methods: _step, _reset and _set_seed
     _reset = _reset
-    _step = _step
+    _step = staticmethod(_step)
     _set_seed = _set_seed
     __getattr__=__getattr__
+
+env = AnFuelpriceEnv()
+print("\n*action_spec:", env.full_action_spec)
+print("\n*reward_spec:", env.full_reward_spec)
+print("\n*done_spec:", env.full_done_spec)
+print("\n*observation_spec:", env.observation_spec)
+
+print("\n-action_keys:", env.action_keys)
+print("\n-reward_keys:", env.reward_keys)
+print("\n-done_keys:", env.done_keys)
+
+print("input_spec:", env.input_spec)
+print("action_spec (as defined by input_spec):", env.action_spec)
+print("reward_spec:", env.reward_spec)
+td = env.reset()
+print("reset tensordict", td)
+check_env_specs(env)
+
+
     
     
 env = AnFuelpriceEnv()
