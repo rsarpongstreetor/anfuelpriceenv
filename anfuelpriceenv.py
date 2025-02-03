@@ -478,7 +478,35 @@ def gen_params(batch_size=torch.Size()) -> TensorDictBase:
 def _set_seed(self, seed:45):
     rng = torch.manual_seed(seed)
     self.rng = rng
-    
+
+def __getattr__(self, name):
+    if name in ("action_keys", "reward_keys", "done_keys"):
+            return getattr(self, name)  # Access the defined attributes
+        if name == 'supports_continuous_actions':
+                # Check if the action space is continuous:
+            if isinstance(self.action_space, spaces.Box) and np.issubdtype(self.action_space.dtype, np.floating):
+                return True
+            else:
+                return False
+
+        return super().__getattr__(name)  # Delegate to parent class
+
+#Define action_spec
+    @property
+def action_spec(self):
+    if isinstance(self.action_space, spaces.Box):
+              # Assuming continuous action space, adjust bounds as needed
+        return BoundedTensorSpec(
+            low=torch.tensor(self.action_space.low),
+            high=torch.tensor(self.action_space.high),
+            dtype=torch.float32,
+            shape=self.action_space.shape
+        )
+    elif isinstance(self.action_space, spaces.Discrete):
+              # Assuming discrete action space
+        return DiscreteTensorSpec(n_actions=self.action_space.n)
+    else:
+        raise NotImplementedError(f"Unsupported action space type: {type(self.action_space)}")       
 
 class AnFuelpriceEnv(EnvBase):
     metadata = {
@@ -508,6 +536,9 @@ class AnFuelpriceEnv(EnvBase):
         self.supports_continuous_actions=False
         self.render=False
         
+        self.action_keys = ["agents", "action"]  # Define action_keys here
+        self.reward_keys = ["agents", "reward"]  # Define reward_keys here
+        self.done_keys = ["terminated"]
 
 
 
@@ -528,23 +559,9 @@ class AnFuelpriceEnv(EnvBase):
     _reset = _reset
     _step = staticmethod(_step)
     _set_seed = _set_seed
+    __getattr__=__getattr__
     
-    #Define action_spec
-    @property
-    def action_spec(self):
-        if isinstance(self.action_space, spaces.Box):
-              # Assuming continuous action space, adjust bounds as needed
-            return BoundedTensorSpec(
-                low=torch.tensor(self.action_space.low),
-                high=torch.tensor(self.action_space.high),
-                dtype=torch.float32,
-                shape=self.action_space.shape
-            )
-        elif isinstance(self.action_space, spaces.Discrete):
-              # Assuming discrete action space
-            return DiscreteTensorSpec(n_actions=self.action_space.n)
-        else:
-            raise NotImplementedError(f"Unsupported action space type: {type(self.action_space)}")   
+    
 env = AnFuelpriceEnv()
 print("\n*action_spec:", env.full_action_spec)
 print("\n*reward_spec:", env.full_reward_spec)
