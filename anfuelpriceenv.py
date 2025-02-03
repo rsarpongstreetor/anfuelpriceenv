@@ -514,6 +514,12 @@ class AnFuelpriceEnv(EnvBase):
         "render_fps": 30,
     }
     batch_locked = False
+
+    self.action_keys = ["agents", "action"]  # Define action_keys here
+    self.reward_keys = ["agents", "reward"]  # Define reward_keys here
+    self.done_keys = ["terminated"]
+
+    
     def __init__(self,td_params=None, seed=None, device="cpu"):
        
 
@@ -534,9 +540,7 @@ class AnFuelpriceEnv(EnvBase):
         self.supports_continuous_actions=False
         self.render=False
         
-        self.action_keys = ["agents", "action"]  # Define action_keys here
-        self.reward_keys = ["agents", "reward"]  # Define reward_keys here
-        self.done_keys = ["terminated"]
+        
 
 
 
