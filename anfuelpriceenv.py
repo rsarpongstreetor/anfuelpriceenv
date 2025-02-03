@@ -415,19 +415,16 @@ def _make_spec_updated(self, td_agents):
 
      # Expanded batch size should match env.batch_size
     expanded_batch_size = tuple([dim for dim in self.batch_size] if self.batch_size else [1])
-    self.action_spec = self.unbatched_action_spec.expand(
-        *expanded_batch_size  # Remove *self.unbatched_action_spec.shape
-    ).to(self.device)
-    self.observation_spec = self.unbatched_observation_spec.expand(
-        *expanded_batch_size  # Remove *self.unbatched_observation_spec.shape
-    ).to(self.device)
-    self.reward_spec = self.unbatched_reward_spec.expand(
-        *expanded_batch_size  # Use expanded_batch_size for reward_spec as well
-    ).to(self.device)
-    self.done_spec = self.unbatched_done_spec.expand(
-        *expanded_batch_size  # Use expanded_batch_size for done_spec as well
-    ).to(self.device)
-    return self.action_spec, self.observation_spec, self.reward_spec, self.done_spec
+    _action_spec = self.unbatched_action_spec.expand(*expanded_batch_size).to(self.device)
+
+    _observation_spec = self.unbatched_observation_spec.expand(*expanded_batch_size).to(self.device)
+
+    _reward_spec = self.unbatched_reward_spec.expand(*expanded_batch_size).to(self.device)
+
+    _done_spec = self.unbatched_done_spec.expand(*expanded_batch_size).to(self.device)
+    
+    # Return the calculated specs
+    return _action_spec, _observation_spec, _reward_spec, _done_spec
 def make_composite_from_td(td):
     # custom function to convert a ``tensordict`` in a similar spec structure
     # of unbounded values.
