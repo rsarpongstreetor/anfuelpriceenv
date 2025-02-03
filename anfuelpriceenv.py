@@ -445,7 +445,7 @@ def make_composite_from_td(td):
 def gen_params(self,batch_size=torch.Size()) -> TensorDictBase:
     """Returns a ``tensordict`` containing the input tensors."""
     if batch_size is None:
-      batch_size = []
+      batch_size = self.batch_size
      #Instantiate the environment with your data
     data_path = '/content/drive/MyDrive/deep learning codes/EIAAPI_DOWNLOAD/solutions/mergedata/DataDic.pt'  # Replace with your actual data path
     data_columns = ['Forex','WTI','Brent','OPEC','Fuelprice5','Fuelprice6','Fuelprice7','Fuelprice8','Fuelprice9','Fuelprice10','Fuelprice11','Fuelprice12','Fuelprice13',
@@ -458,7 +458,8 @@ def gen_params(self,batch_size=torch.Size()) -> TensorDictBase:
 
     if batch_size:
         # Assuming 'ac' is a dictionary of tensors, expand each tensor
-      ac = {k: torch.tensor(v).expand(*self.batch_size, *torch.tensor(v).shape)  for k, v in ac.items()} # Convert lists to tensors before expanding
+      
+      ac = {k: torch.tensor(v).expand(*batch_size, *torch.tensor(v).shape) if isinstance(v, (list, np.ndarray)) else torch.tensor(v) for k, v in ac.items()}
 
 
     td = TensorDict({
@@ -466,11 +467,10 @@ def gen_params(self,batch_size=torch.Size()) -> TensorDictBase:
           "params": ac,
           }
         ,
-        batch_size=self.batch_size,
+        batch_size=batch_size,
         device=torch.device("cpu" if torch.cuda.is_available() else "cpu"),
     )
-    if batch_size:
-      td = td.expand(batch_size).contiguous()
+    
     return td
 
 
