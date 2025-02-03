@@ -520,9 +520,7 @@ class AnFuelpriceEnv(EnvBase):
     
     def __init__(self,td_params=None, seed=None, device="cpu"):
 
-        self.action_keys = ["agents", "action"]  # Define action_keys here
-        self.reward_keys = ["agents", "reward"]  # Define reward_keys here
-        self.done_keys = ["terminated"]
+        
        
 
         # Extract the variables needed in _make_spec
@@ -558,7 +556,9 @@ class AnFuelpriceEnv(EnvBase):
         if seed is None:
             seed = torch.empty((), dtype=torch.int64).random_().item()
         self.set_seed(seed)
-
+        self.action_keys = ["agents", "action"]  # Define action_keys here
+        self.reward_keys = ["agents", "reward"]  # Define reward_keys here
+        self.done_keys = ["terminated"]
     # Helpers: _make_step and gen_params
     gen_params =gen_params
     _make_spec = _make_spec_updated  # w
