@@ -597,7 +597,7 @@ def make_env(
 
 # Call the function before accessing the attribute
 # Make sure to pass an appropriate 'scenario'
-env = make_env(scenario='your_scenario')  # Replace 'your_scenario' with an actual scenario
+env = make_env(scenario='AnFuelpriceEnv')  # Replace 'your_scenario' with an actual scenario
 
 
 
