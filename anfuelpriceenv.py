@@ -510,6 +510,8 @@ class AnFuelpriceEnv(EnvBase):
 
         self.unbatched_observation_spec = None
         self.unbatched_reward_spec = None
+        self.supports_continuous_actions=True
+        self.supports_discrete_actions=True
 
 
 
