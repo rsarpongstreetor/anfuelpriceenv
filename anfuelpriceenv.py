@@ -497,16 +497,12 @@ def supports_continuous_actions(self):
     # For example, if your environment uses Box action spaces:
     return hasattr(env.full_action_spec, 'shape') and len(env.full_action_spec.shape) > 0
 
-def supports_discrete_actions(self):
-     """Checks if the environment supports discrete actions.
-      Returns:
-      bool: True if the environment supports discrete actions, False otherwise.
-        """
-    # Check if your environment supports discrete actions
+def supports_discrete_actions():
+    from torchrl.data import BoundedTensorSpec, UnboundedContinuousTensorSpec, DiscreteTensorSpec
+    # Check if your environment supports continuous actions
     # and return True or False accordingly
-    # Here, we check if the action space is an instance of Discrete
-    return isinstance(env.full_action_spec, DiscreteTensorSpec)
-
+    # For example, if your environment uses Box action spaces:
+    return isinstance(env.full_action_spec, DiscreteTensorSpec) #fixed indentation here by ensuring it aligns with the 'return' statement
 
 
 
