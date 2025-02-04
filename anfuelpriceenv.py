@@ -491,7 +491,7 @@ def supports_continuous_actions(self):
     # Check if your environment supports continuous actions
     # and return True or False accordingly
     # For example, if your environment uses Box action spaces:
-    return  isinstance(self.full_action_spec, (Union[BoundedContinuousTensorSpec, ContinuousSpec]))
+    return  isinstance(self.action_space, Box)
 
 def supports_discrete_actions(self):
     """Checks if the environment supports discrete actions.
@@ -501,7 +501,7 @@ def supports_discrete_actions(self):
     # Check if your environment supports discrete actions
     # and return True or False accordingly
     # Here, we check if the action space is an instance of Discrete
-    return isinstance(self.full_action_spec,  DiscreteTensorSpec)
+    return isinstance(self.action_space,Discrete)
 
 
 
