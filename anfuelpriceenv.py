@@ -491,15 +491,15 @@ def supports_continuous_actions(self):
     # and return True or False accordingly
     # For example, if your environment uses Box action spaces:
     return isinstance(self.action_space, box  )
-    
+
 def supports_discrete_actions(self):
- """Checks if the environment supports discrete actions.
-     Returns:
-     bool: True if the environment supports discrete actions, False otherwise.
+    """Checks if the environment supports discrete actions.
+      Returns:
+      bool: True if the environment supports discrete actions, False otherwise.
         """
     # Check if your environment supports discrete actions
     # and return True or False accordingly
-    # Here, we check if the action space is an instance of Discrete:
+    # Here, we check if the action space is an instance of Discrete
     return isinstance(self.action_space, Discrete)
 
 
