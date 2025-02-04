@@ -30,7 +30,7 @@ from torchrl.envs.utils import check_env_specs # This line imports the missing f
 import requests
 import torch
 from gym import spaces  # Import spaces from gym
-from pickle import NONE # Import as pickle.NONE to avoid name conflicts
+from pickle import NONE # Import as pickle.NONE to avoid name conflict
 
 
 
@@ -486,11 +486,12 @@ def _set_seed(self, seed:45):
     rng = torch.manual_seed(seed)
     self.rng = rng
 
+@classmethod
 def supports_continuous_actions(self):
     # Check if your environment supports continuous actions
     # and return True or False accordingly
     # For example, if your environment uses Box action spaces:
-    return isinstance(self.action_space, box  )
+    return  isinstance(self.full_action_spec, (Union[BoundedContinuousTensorSpec, ContinuousSpec]))
 
 def supports_discrete_actions(self):
     """Checks if the environment supports discrete actions.
@@ -500,7 +501,7 @@ def supports_discrete_actions(self):
     # Check if your environment supports discrete actions
     # and return True or False accordingly
     # Here, we check if the action space is an instance of Discrete
-    return isinstance(self.action_space, Discrete)
+    return isinstance(self.full_action_spec,  DiscreteTensorSpec)
 
 
 
@@ -541,14 +542,15 @@ class AnFuelpriceEnv(EnvBase):
     # Helpers: _make_step and gen_params
     gen_params =staticmethod(gen_params)
     _make_spec = _make_spec_updated  #
-    supports_continuous_actions = supports_continuous_actions
-    supports_discrete_actions = supports_discrete_actions
+    
     
 
     # Mandatory methods: _step, _reset and _set_seed
     _reset = _reset
     _step = staticmethod(_step)
     _set_seed = _set_seed
+    supports_continuous_actions = supports_continuous_actions
+    supports_discrete_actions = supports_discrete_actions
     
    
 
