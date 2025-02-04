@@ -504,7 +504,7 @@ def supports_discrete_actions():
     return isinstance(env.full_action_spec, DiscreteTensorSpec) #fixed indentation here by ensuring it aligns with the 'return' statement
 
 def env_name(): 
-        return "anfuelpriceenv" 
+        return "AnFuelpriceEnv"
 
 
 
