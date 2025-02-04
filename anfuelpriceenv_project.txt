@@ -1,6 +1,4 @@
-anfuelpriceenv_project/
-├── anfuelpriceenv/
-│   ├── __init__.py
-│   ├── anfuelpriceenv.py
-│   └── DataDic.py
-└── setup.py
+anfuelpriceenv/
+├── __init__.py
+├── anfuelpriceenv.py
+└── setup.py # Add setup.py
