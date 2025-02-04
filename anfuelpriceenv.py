@@ -588,7 +588,7 @@ def make_env(
     device: Union[torch.device, str, int] = "cpu",
     continuous_actions: bool = False,
     wrapper: Optional["vmas.simulator.environment.Wrapper"] = True,
-    max_steps: Optional[int] = 20,
+    max_steps: Optional[int] = 100,
     seed: Optional[int] = None,
     dict_spaces: bool = False,
     multidiscrete_actions: bool = True,
