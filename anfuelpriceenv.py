@@ -290,7 +290,8 @@ def _make_spec(self, td_agents):
 
 
     for i in range(self.n_agents):
-        agent[i]["action_spec"] =  DiscreteTensorSpec( n=3,
+        agent[i]["action_spec"] =  BoundedTensorSpec( low = action_min[i],
+                                                     high = action_max[i],
                                                      shape= tuple([dim for dim in self.batch_size] if self.batch_size else [1]) + (self.n_agents)+(13,1),
                                                      dtype=torch.float32),
 
@@ -374,9 +375,11 @@ def _make_spec_updated(self, td_agents):
 
 
     self.unbatched_action_spec = CompositeSpec(
-        {"agents": {"action": DiscreteTensorSpec( n=3,
-                shape=result555.shape,
-                dtype=torch.float32,
+        {"agents": {"action": BoundedTensorSpec(
+            low=result555,
+            high=result444,
+            shape=result555.shape,
+            dtype=torch.float32,
             )}}
     )
 
