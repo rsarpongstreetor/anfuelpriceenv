@@ -491,20 +491,21 @@ def _set_seed(self, seed:45):
 
 @classmethod
 def supports_continuous_actions(self):
+    from torchrl.data import BoundedTensorSpec, UnboundedContinuousTensorSpec, DiscreteTensorSpec
     # Check if your environment supports continuous actions
     # and return True or False accordingly
     # For example, if your environment uses Box action spaces:
-    return  isinstance(self.action_space, Box)
+    return hasattr(env.full_action_spec, 'shape') and len(env.full_action_spec.shape) > 0
 
 def supports_discrete_actions(self):
-    """Checks if the environment supports discrete actions.
+     """Checks if the environment supports discrete actions.
       Returns:
       bool: True if the environment supports discrete actions, False otherwise.
         """
     # Check if your environment supports discrete actions
     # and return True or False accordingly
     # Here, we check if the action space is an instance of Discrete
-    return isinstance(self.action_space,Discrete)
+    return isinstance(env.full_action_spec, DiscreteTensorSpec)
 
 
 
