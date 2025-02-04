@@ -90,11 +90,10 @@ class DDataenv:
 
 
 
-from types import new_class
-from types import new_class
 
 
-from types import new_class
+
+
 from types import new_class
 def _step(tensordict):
     n_agents = env.n_agents
@@ -112,7 +111,7 @@ def _step(tensordict):
         obs=torch.reshape(td['params','obsState&Fuel'].clone().detach(),(13,))
         reward=torch.reshape(td['params','rewardState&reward'].clone().detach(),(13,))
         action=torch.reshape(td['params','actionState&action'].clone().detach(),(13,))
-        Date=torch.tensor(td['params','Date'].clone().detach())
+        Date=torch.reshape(td['params','Date'].clone().detach(),(1,))
         new_obs = torch.add(obs, torch.stack([action_i * reward_i for action_i, reward_i in zip(action, reward)]))
         new_obs=torch.reshape(new_obs,(13,))
 
