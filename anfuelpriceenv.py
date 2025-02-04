@@ -503,6 +503,9 @@ def supports_discrete_actions():
     # For example, if your environment uses Box action spaces:
     return isinstance(env.full_action_spec, DiscreteTensorSpec) #fixed indentation here by ensuring it aligns with the 'return' statement
 
+def env_name(): 
+        return "anfuelpriceenv" 
+
 
 
 class AnFuelpriceEnv(EnvBase):
@@ -550,6 +553,8 @@ class AnFuelpriceEnv(EnvBase):
     _set_seed = _set_seed
     supports_continuous_actions = supports_continuous_actions
     supports_discrete_actions = supports_discrete_actions
+    env_name = env_name
+    
     
    
 
