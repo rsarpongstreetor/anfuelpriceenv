@@ -560,13 +560,13 @@ class AnFuelpriceEnv(EnvBase):
     def get_observation_spec(self):
         return self.observation_spec
    
-    def get_full_action_spec(self):
-        return self.full_action_spec
+    def get_action_spec(self):
+        return self.action_spec
    
-    def get_full_reward_spec(self):
+    def get_reward_spec(self):
         return self.full_reward_spec
     
-    def get_full_done_spec(self):
+    def get_done_spec(self):
         return self.done_spe
     @property
     def terminated_spec(self):
