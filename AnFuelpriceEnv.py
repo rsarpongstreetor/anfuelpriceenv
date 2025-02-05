@@ -514,7 +514,7 @@ class AnFuelpriceEnv(EnvBase):
     # You can use the scenario argument here if needed
     # print(f"Scenario: {US_DATA }") 
     batch_locked = False
-    def __init__(self,td_params=None, seed=None, device="cpu"):
+    def __init__(self,td_params=None, seed=None, device="cpu",**kwargs):
         if td_params is None:
            td_params = self.gen_params()
 
