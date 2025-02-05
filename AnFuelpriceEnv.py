@@ -511,6 +511,8 @@ class AnFuelpriceEnv(EnvBase):
         "render_modes": ["human", "rgb_array"],
         "render_fps": 30,
     }
+    # You can use the scenario argument here if needed
+    # print(f"Scenario: {US_DATA }") 
     batch_locked = False
     def __init__(self,td_params=None, seed=None, device="cpu"):
         if td_params is None:
