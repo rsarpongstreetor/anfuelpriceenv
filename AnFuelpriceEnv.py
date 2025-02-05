@@ -625,7 +625,7 @@ import torch
 from torchrl.data import BoundedTensorSpec, CompositeSpec, UnboundedContinuousTensorSpec, DiscreteTensorSpec
 
 def make_env(
-    scenario: Union[str, "US_DATA"],
+   
     num_envs: int = 1,
     device: Union[torch.device, str, int] = "cpu",
     continuous_actions: bool = False,
@@ -641,18 +641,8 @@ def make_env(
     """
     Create a vectorized environment with the specified configuration.
 
-    # ... (rest of the docstring)
-    """
-    # ... (rest of your code)
-    # Assuming observation_spec is defined in AnFuelpriceEnv
-    if isinstance(scenario, str):
-        scenario = AnFuelpriceEnv()  # Instantiate env if scenario is a string
-
-    # Assign observation_spec to the function
-    make_env.observation_spec = scenario.observation_spec
-
-    return scenario  # or some other appropriate environment
-
+   
+    
 # Call the function before accessing the attribute
 # Make sure to pass an appropriate 'scenario'
 env = make_env(scenario='USA Data')  # Replace 'your_scenario' with an actual scenario
