@@ -511,28 +511,28 @@ def supports_discrete_actions():
 def env_name(): 
         return "AnFuelpriceEnv"
 @property
-def observation_spec(self)
+def observation_spec(self):
     return self.observation_spec
 @property
-def full_action_spec(self)
+def full_action_spec(self):
     return self.full_action_spec
 @property
-def full_reward_spec(self)
+def full_reward_spec(self):
     return self.full_reward_spec
 @property
-def full_done_spec(self)
+def full_done_spec(self):
     return self.full_done_spe
 @property
-def terminated_spec(self)
+def terminated_spec(self):
     return self.terminated_spec
 @property
-def truncated_spec(self)
+def truncated_spec(self):
     return self.truncated_spec
 @property
-def full_info_spec(self)
+def full_info_spec(self):
     return self.full_info_spec
 @property
-def discount_spec(self)
+def discount_spec(self):
     return self.discount_spec
 
 
