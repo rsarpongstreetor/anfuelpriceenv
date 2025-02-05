@@ -488,14 +488,17 @@ def _set_seed(self, seed:45):
     rng = torch.manual_seed(seed)
     self.rng = rng
 
-@classmethod
+def full_info_spec(self):
+    pass
+
+@property
 def supports_continuous_actions(self):
     from torchrl.data import BoundedTensorSpec, UnboundedContinuousTensorSpec, DiscreteTensorSpec
     # Check if your environment supports continuous actions
     # and return True or False accordingly
     # For example, if your environment uses Box action spaces:
     return hasattr(env.full_action_spec, 'shape') and len(env.full_action_spec.shape) > 0
-
+@property
 def supports_discrete_actions():
     from torchrl.data import BoundedTensorSpec, UnboundedContinuousTensorSpec, DiscreteTensorSpec
     # Check if your environment supports continuous actions
@@ -503,11 +506,40 @@ def supports_discrete_actions():
     # For example, if your environment uses Box action spaces:
     return isinstance(env.full_action_spec, DiscreteTensorSpec) #fixed indentation here by ensuring it aligns with the 'return' statement
 
+
+@property
 def env_name(): 
         return "AnFuelpriceEnv"
+@property
+def observation_spec(self)
+    return self.observation_spec
+@property
+def full_action_spec(self)
+    return self.full_action_spec
+@property
+def full_reward_spec(self)
+    return self.full_reward_spec
+@property
+def full_done_spec(self)
+    return self.full_done_spe
+@property
+def terminated_spec(self)
+    return self.terminated_spec
+@property
+def truncated_spec(self)
+    return self.truncated_spec
+@property
+def full_info_spec(self)
+    return self.full_info_spec
+@property
+def discount_spec(self)
+    return self.discount_spec
 
 
-
+    
+    
+       
+       
 class AnFuelpriceEnv(EnvBase):
     metadata = {
         "render_modes": ["human", "rgb_array"],
@@ -529,6 +561,7 @@ class AnFuelpriceEnv(EnvBase):
         self.unbatched_reward_spec = None
         self.agent_tds = []
         self.agents = [{} for _ in range(self.n_agents)]
+        
 
 
 
