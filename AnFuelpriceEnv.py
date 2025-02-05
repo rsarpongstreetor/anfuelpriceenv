@@ -547,7 +547,7 @@ class AnFuelpriceEnv(EnvBase):
           # For example, if your environment uses Box action spaces:
         return hasattr(env.full_action_spec, 'shape') and len(env.full_action_spec.shape) > 0
        
-    def get_supports_discrete_actions():
+    def get_supports_discrete_actions(self):
         from torchrl.data import BoundedTensorSpec, UnboundedContinuousTensorSpec, DiscreteTensorSpec
           # Check if your environment supports continuous actions
           # and return True or False accordingly
@@ -591,8 +591,7 @@ class AnFuelpriceEnv(EnvBase):
     _reset = _reset
     _step = staticmethod(_step)
     _set_seed = _set_seed
-    supports_continuous_actions = supports_continuous_actions
-    supports_discrete_actions = supports_discrete_actions
+    
     env_name = env_name
     full_info_spec = full_info_spec
     
