@@ -553,7 +553,7 @@ class AnFuelpriceEnv(EnvBase):
           # and return True or False accordingly
           # For example, if your environment uses Box action spaces:
         return isinstance(env.full_action_spec, DiscreteTensorSpec) #fixed indentation here by ensuring it aligns with the 'return' statement
-
+    @property
     def get_env_name(): 
         return "AnFuelpriceEnv"
     
@@ -592,7 +592,7 @@ class AnFuelpriceEnv(EnvBase):
     _step = staticmethod(_step)
     _set_seed = _set_seed
     
-    env_name = env_name
+    
     full_info_spec = full_info_spec
     
    
