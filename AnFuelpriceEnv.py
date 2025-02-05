@@ -512,13 +512,13 @@ class AnFuelpriceEnv(EnvBase):
         "render_fps": 30,
     }
     # You can use the scenario argument here if needed
-    # print(f"Scenario: {US_DATA }") 
+    # print(f"scenario: {US_DATA }") 
     batch_locked = False
     def __init__(self,td_params=None, seed=None, device="cpu",**kwargs):
         if td_params is None:
            td_params = self.gen_params()
 
-
+        scenario: Union[str, "US_DATA"]
         # Extract the variables needed in _make_spec
         self.n_agents = 1
         self.convo_dim = [9, 9]
@@ -625,7 +625,7 @@ import torch
 from torchrl.data import BoundedTensorSpec, CompositeSpec, UnboundedContinuousTensorSpec, DiscreteTensorSpec
 
 def make_env(
-    scenario: Union[str, "AnFuelpriceEnv"],
+    scenario: Union[str, "US_DATA"],
     num_envs: int = 1,
     device: Union[torch.device, str, int] = "cpu",
     continuous_actions: bool = False,
