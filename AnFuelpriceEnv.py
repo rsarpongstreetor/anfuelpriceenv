@@ -23,6 +23,10 @@ import torch
 import os
 from torchrl.envs.transforms.transforms import _apply_to_composite
 import pandas as pd
+import google.colab
+from typing import Dict as TypingDict, Any, Union, List, Optional
+# Mount Google Drive
+google.colab.drive.mount('/content/drive')
 
 def is_valid_data(data):
     return isinstance(data, dict) or (isinstance(data, list) and all(isinstance(item, dict) for item in data))
@@ -489,51 +493,13 @@ def _set_seed(self, seed:45):
     self.rng = rng
 
 def full_info_spec(self):
-    pass
-
-@property
-def supports_continuous_actions(self):
-    from torchrl.data import BoundedTensorSpec, UnboundedContinuousTensorSpec, DiscreteTensorSpec
-    # Check if your environment supports continuous actions
-    # and return True or False accordingly
-    # For example, if your environment uses Box action spaces:
-    return hasattr(env.full_action_spec, 'shape') and len(env.full_action_spec.shape) > 0
-@property
-def supports_discrete_actions():
-    from torchrl.data import BoundedTensorSpec, UnboundedContinuousTensorSpec, DiscreteTensorSpec
-    # Check if your environment supports continuous actions
-    # and return True or False accordingly
-    # For example, if your environment uses Box action spaces:
-    return isinstance(env.full_action_spec, DiscreteTensorSpec) #fixed indentation here by ensuring it aligns with the 'return' statement
+        # Implementation of your full_info_spec logic here
+        # For example, if it should always return an empty dictionary:
+    return {}
+   
 
 
-@property
-def env_name(): 
-        return "AnFuelpriceEnv"
-@property
-def observation_spec(self):
-    return self.observation_spec
-@property
-def full_action_spec(self):
-    return self.full_action_spec
-@property
-def full_reward_spec(self):
-    return self.full_reward_spec
-@property
-def full_done_spec(self):
-    return self.full_done_spe
-@property
-def terminated_spec(self):
-    return self.terminated_spec
-@property
-def truncated_spec(self):
-    return self.truncated_spec
-@property
-def full_info_spec(self):
-    return self.full_info_spec
-@property
-def discount_spec(self):
-    return self.discount_spec
+
 
 
     
@@ -573,6 +539,47 @@ class AnFuelpriceEnv(EnvBase):
         if seed is None:
             seed = torch.empty((), dtype=torch.int64).random_().item()
         self.set_seed(seed)
+    
+    def get_supports_continuous_actions(self):
+        from torchrl.data import BoundedTensorSpec, UnboundedContinuousTensorSpec, DiscreteTensorSpec
+          # Check if your environment supports continuous actions
+          # and return True or False accordingly
+          # For example, if your environment uses Box action spaces:
+        return hasattr(env.full_action_spec, 'shape') and len(env.full_action_spec.shape) > 0
+       
+    def get_supports_discrete_actions():
+        from torchrl.data import BoundedTensorSpec, UnboundedContinuousTensorSpec, DiscreteTensorSpec
+          # Check if your environment supports continuous actions
+          # and return True or False accordingly
+          # For example, if your environment uses Box action spaces:
+        return isinstance(env.full_action_spec, DiscreteTensorSpec) #fixed indentation here by ensuring it aligns with the 'return' statement
+
+    def get_env_name(): 
+        return "AnFuelpriceEnv"
+    
+    def get_observation_spec(self):
+        return self.observation_spec
+   
+    def get_full_action_spec(self):
+        return self.full_action_spec
+   
+    def get_full_reward_spec(self):
+        return self.full_reward_spec
+    
+    def get_full_done_spec(self):
+        return self.done_spe
+    @property
+    def terminated_spec(self):
+        return self.done_spec
+    @property
+    def truncated_spec(self):
+        return self.done_spec
+   
+    def get_full_info_spec(self):
+        return {}
+    
+    def get_discount_spec(self):
+        return self.discount_spec      
 
     # Helpers: _make_step and gen_params
     gen_params =staticmethod(gen_params)
@@ -587,11 +594,14 @@ class AnFuelpriceEnv(EnvBase):
     supports_continuous_actions = supports_continuous_actions
     supports_discrete_actions = supports_discrete_actions
     env_name = env_name
+    full_info_spec = full_info_spec
     
+   
     
    
 
 env = AnFuelpriceEnv()
+
 print("\n*action_spec:", env.full_action_spec)
 print("\n*reward_spec:", env.full_reward_spec)
 print("\n*done_spec:", env.full_done_spec)
@@ -644,14 +654,13 @@ def make_env(
         scenario = AnFuelpriceEnv()  # Instantiate env if scenario is a string
 
     # Assign observation_spec to the function
-    make_env.observation_spec = scenario.observation_spec
+    observation_spec = scenario.observation_spec
 
     return scenario  # or some other appropriate environment
 
 # Call the function before accessing the attribute
 # Make sure to pass an appropriate 'scenario'
 env = make_env(scenario='AnFuelpriceEnv')  # Replace 'your_scenario' with an actual scenario
-
 
 
 
