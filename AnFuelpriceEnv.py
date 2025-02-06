@@ -638,14 +638,14 @@ def make_env(
     grad_enabled: bool = False,
     **kwargs  # Environment specific kwargs
 ):
-    """
-    Create a vectorized environment with the specified configuration.
+    #Create a vectorized environment with the specified configuration.
 
    
     
-# Call the function before accessing the attribute
+# Call the function before acce
+    ssing the attribute
 # Make sure to pass an appropriate 'scenario'
-env = make_env(scenario='USA Data')  # Replace 'your_scenario' with an actual scenario
+#env = make_env(scenario='USA Data')  # Replace 'your_scenario' with an actual scenario
 
 
 
