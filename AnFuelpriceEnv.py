@@ -1,4 +1,3 @@
-
 from typing import Dict as TypingDict, Any, Union, List, Optional
 import torch
 import numpy as np
@@ -183,7 +182,7 @@ def _step(tensordict):
     expanded_agent_reward = agent_reward[:,4:].reshape(agent_reward.shape[0], 9, 1, 1).expand(n_agents, 9, *env.convo_dim)
     expanded_agent_action=  agent_action[:,4:].reshape(agent_action.shape[0], 9, 1, 1).expand(n_agents, 9, *env.convo_dim)
     expanded_agent_Date = agent_Date.reshape(agent_Date.shape[0], 1, 1, 1).expand(n_agents, 1, *env.convo_dim) 
-    print( expanded_agent_Date.shape)
+   
    
 
 
@@ -285,7 +284,7 @@ def _reset(self, tensordict=None, **kwargs):
        # Adjust the expansion for expanded_agent_Date_tensor# Reshape and expand agent_Date_tensor to match expected shape
        expanded_agent_Date_tensor = agent_Date_tensor.expand(*self.batch_size,*agent_Date_tensor.shape) # Reshape to (1, 1) and expand
        expanded_agent_obs_tensor = agent_obs_tensor.expand(*self.batch_size, *agent_obs_tensor.shape) # expand obs to match the batch size
-       print(expanded_agent_Date_tensor.shape)
+       
 
 
 
@@ -534,6 +533,7 @@ def full_info_spec(self):
         # For example, if it should always return an empty dictionary:
     return {}
 
+from typing import Dict, List # Import Dict and List here 
 def group_map(self, env: EnvBase) -> Dict[str, List[str]]:
         # The group map mapping group names to agent names
         # The data in the tensordict will have to be presented this way
@@ -609,10 +609,10 @@ class AnFuelpriceEnv(EnvBase):
     def get_observation_spec(self):
         return self.observation_spec
    
-    def get_action_spec(self):
-        return self.action_spec
+    def get_full_action_spec(self):
+        return self.full_action_spec
    
-    def get_reward_spec(self):
+    def get_full_reward_spec(self):
         return self.full_reward_spec
     
     def get_done_spec(self):
@@ -645,8 +645,6 @@ class AnFuelpriceEnv(EnvBase):
     _reset = _reset
     _step = staticmethod(_step)
     _set_seed = _set_seed
-    
-    
     full_info_spec = full_info_spec
     
    
@@ -678,7 +676,6 @@ check_env_specs(env)
 
     
     
-
 
 
 
