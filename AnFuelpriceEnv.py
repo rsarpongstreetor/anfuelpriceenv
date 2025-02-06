@@ -620,32 +620,7 @@ print("reset tensordict", td)
 check_env_specs(env)
 
 
-from typing import Union, Optional
-import torch
-from torchrl.data import BoundedTensorSpec, CompositeSpec, UnboundedContinuousTensorSpec, DiscreteTensorSpec
 
-def make_env(
-   
-    num_envs: int = 1,
-    device: Union[torch.device, str, int] = "cpu",
-    continuous_actions: bool = False,
-    wrapper: Optional["vmas.simulator.environment.Wrapper"] = True,
-    max_steps: Optional[int] = 20,
-    seed: Optional[int] = None,
-    dict_spaces: bool = False,
-    multidiscrete_actions: bool = True,
-    clamp_actions: bool = False,
-    grad_enabled: bool = False,
-    **kwargs  # Environment specific kwargs
-):
-    #Create a vectorized environment with the specified configuration.
-
-   
-    
-# Call the function before acce
-    ssing the attribute
-# Make sure to pass an appropriate 'scenario'
-#env = make_env(scenario='USA Data')  # Replace 'your_scenario' with an actual scenario
 
 
 
