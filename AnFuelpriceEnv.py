@@ -66,7 +66,7 @@ class DDataenv:
         ######################################################################
         """Loads data from the specified path."""
         # Download the file if it doesn't exist locally
-       """ if not os.path.exists(self.data_path.split('/')[-1]): # Check for file existence locally
+        """ if not os.path.exists(self.data_path.split('/')[-1]): # Check for file existence locally
             import requests
             print(f"Downloading data from {self.data_path}...") # Indicate download start
             response = requests.get(self.data_path, stream=True)
