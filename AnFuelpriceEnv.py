@@ -533,6 +533,12 @@ def full_info_spec(self):
         # Implementation of your full_info_spec logic here
         # For example, if it should always return an empty dictionary:
     return {}
+
+def group_map(self, env: EnvBase) -> Dict[str, List[str]]:
+        # The group map mapping group names to agent names
+        # The data in the tensordict will have to be presented this way
+    return {"agents": [agent.name for agent in env.agents]}
+
    
 
 
@@ -561,12 +567,13 @@ class AnFuelpriceEnv(EnvBase):
         self.convo_dim = [9, 9]
         self.batch_size = [10, 10]
        
-        self.agent_names = ["USDATA"]  # Or a dictionary if needed
+       
 
         self.unbatched_observation_spec = None
         self.unbatched_reward_spec = None
         self.agent_tds = []
         self.agents = [{} for _ in range(self.n_agents)]
+        self.agent_names = ["USDATA"]  # Or a dictionary if needed
         
 
 
@@ -593,6 +600,8 @@ class AnFuelpriceEnv(EnvBase):
           # and return True or False accordingly
           # For example, if your environment uses Box action spaces:
         return isinstance(env.full_action_spec, DiscreteTensorSpec) #fixed indentation here by ensuring it aligns with the 'return' statement
+    
+    
     @property
     def get_env_name(): 
         return "AnFuelpriceEnv"
@@ -608,6 +617,11 @@ class AnFuelpriceEnv(EnvBase):
     
     def get_done_spec(self):
         return self.done_spe
+    def get_group_map(self, env: EnvBase) -> Dict[str, List[str]]:
+        # The group map mapping group names to agent names
+        # The data in the tensordict will have to be presented this way
+        return {"agents": [agent.name for agent in env.agents]}
+   
     @property
     def terminated_spec(self):
         return self.done_spec
