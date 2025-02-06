@@ -47,6 +47,25 @@ class DDataenv:
 
     def load_data(self) -> pd.DataFrame:
         with open(self.data_path, 'rb') as f:
+            self.data = torch.load(f,weights_only=False )
+            self.data = np.array(self.data)
+            # Check if the array has at least 3 dimensions
+        if len(self.data.shape) >= 3:
+            self.data = self.data.reshape(self.data.shape[1], self.data.shape[2])
+        else:
+            # Handle cases where the loaded data has fewer dimensions
+            # You might need to adjust this logic based on the actual structure of your data
+            print("Warning: Loaded data has fewer than 3 dimensions. Reshape skipped.")
+
+        if not isinstance(self.data, pd.DataFrame):
+            self.data = pd.DataFrame(self.data, columns=self.data_columns)
+        self.data = np.array(self.data).reshape(self.data.shape[0], self.data.shape[1])
+
+
+        if not isinstance(self.data, pd.DataFrame):
+            self.data = pd.DataFrame(self.data, columns=self.data_columns)
+   ####################################################################################
+        """ with open(self.data_path, 'rb') as f:
             self.data = torch.load(f, weights_only=False)
             self.data = np.array(self.data)
             # Check if the array has at least 3 dimensions
@@ -62,7 +81,7 @@ class DDataenv:
         self.data = np.array(self.data).reshape(self.data.shape[0], self.data.shape[1])
 
         if not isinstance(self.data, pd.DataFrame):
-            self.data = pd.DataFrame(self.data, columns=self.data_columns)
+            self.data = pd.DataFrame(self.data, columns=self.data_columns)"""
         ######################################################################
         """Loads data from the specified path."""
         # Download the file if it doesn't exist locally
