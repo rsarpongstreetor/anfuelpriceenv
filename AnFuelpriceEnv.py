@@ -46,7 +46,7 @@ class DDataenv:
         self.data = None
 
     def load_data(self) -> pd.DataFrame:
-        with open(self.data_path, 'rb') as f:
+        """with open(self.data_path, 'rb') as f:
             self.data = torch.load(f, weights_only=False)
             self.data = np.array(self.data)
             # Check if the array has at least 3 dimensions
@@ -62,7 +62,25 @@ class DDataenv:
         self.data = np.array(self.data).reshape(self.data.shape[0], self.data.shape[1])
 
         if not isinstance(self.data, pd.DataFrame):
-            self.data = pd.DataFrame(self.data, columns=self.data_columns)
+            self.data = pd.DataFrame(self.data, columns=self.data_columns)"""
+        ######################################################################
+        """Loads data from the specified path."""
+        # Download the file if it doesn't exist locally
+        if not os.path.exists(self.data_path.split('/')[-1]): # Check for file existence locally
+            import requests
+            print(f"Downloading data from {self.data_path}...") # Indicate download start
+            response = requests.get(self.data_path, stream=True)
+            response.raise_for_status()  # Raise HTTPError for bad responses (4xx or 5xx)
+            with open(self.data_path.split('/')[-1], 'wb') as f: # Save with filename from URL
+                for chunk in response.iter_content(chunk_size=8192):
+                    f.write(chunk)
+            print("Download complete.") # Indicate download end
+
+        # Now load the data
+        with open(self.data_path.split('/')[-1], 'rb') as f: # Load local file
+            self.data = torch.load(f, weights_only=False) # Assuming it's a PyTorch file
+            self.data = np.array(self.data) # Convert to NumPy array
+        return self.data
 
     def get_observation(self) -> TypingDict[str, Union[np.ndarray, TypingDict[str, float]]]:
         if self.data is None:
