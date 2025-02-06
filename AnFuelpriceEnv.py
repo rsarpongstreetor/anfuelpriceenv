@@ -46,7 +46,7 @@ class DDataenv:
         self.data = None
 
     def load_data(self) -> pd.DataFrame:
-        """with open(self.data_path, 'rb') as f:
+        with open(self.data_path, 'rb') as f:
             self.data = torch.load(f, weights_only=False)
             self.data = np.array(self.data)
             # Check if the array has at least 3 dimensions
@@ -62,11 +62,11 @@ class DDataenv:
         self.data = np.array(self.data).reshape(self.data.shape[0], self.data.shape[1])
 
         if not isinstance(self.data, pd.DataFrame):
-            self.data = pd.DataFrame(self.data, columns=self.data_columns)"""
+            self.data = pd.DataFrame(self.data, columns=self.data_columns)
         ######################################################################
         """Loads data from the specified path."""
         # Download the file if it doesn't exist locally
-        if not os.path.exists(self.data_path.split('/')[-1]): # Check for file existence locally
+       """ if not os.path.exists(self.data_path.split('/')[-1]): # Check for file existence locally
             import requests
             print(f"Downloading data from {self.data_path}...") # Indicate download start
             response = requests.get(self.data_path, stream=True)
@@ -80,7 +80,7 @@ class DDataenv:
         with open(self.data_path.split('/')[-1], 'rb') as f: # Load local file
             self.data = torch.load(f, weights_only=False) # Assuming it's a PyTorch file
             self.data = np.array(self.data) # Convert to NumPy array
-        return self.data
+        return self.data"""
 
     def get_observation(self) -> TypingDict[str, Union[np.ndarray, TypingDict[str, float]]]:
         if self.data is None:
@@ -478,7 +478,7 @@ def gen_params(batch_size=torch.Size()) -> TensorDictBase:
     if batch_size is None:
       batch_size = []
      #Instantiate the environment with your data
-    data_path = 'https://github.com/rsarpongstreetor/rsdata/blob/main/DataDic%20(2).pt'  # Replace with your actual data path
+    data_path = 'https://drive.google.com/file/d/1K7OBG-qZnVC4Sm7-zwLqIXTmNRLYe02e/view?usp=drive_link'  # Replace with your actual data path
     data_columns = ['Forex','WTI','Brent','OPEC','Fuelprice5','Fuelprice6','Fuelprice7','Fuelprice8','Fuelprice9','Fuelprice10','Fuelprice11','Fuelprice12','Fuelprice13',
                           'reward0','reward1','reward2','reward3','reward4','reward5','reward6','reward7','reward8','reward9','reward10','reward11','reward12',
                           'action0','action1','action2','action3','action4','action5','action6','action7','action8','action9','action10','action11','action12','Date']  # Add all your column names
