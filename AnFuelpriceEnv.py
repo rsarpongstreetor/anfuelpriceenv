@@ -560,7 +560,8 @@ class AnFuelpriceEnv(EnvBase):
         self.n_agents = 1
         self.convo_dim = [9, 9]
         self.batch_size = [10, 10]
-        self.action_space = spaces.Box(low=-1, high=1, shape=(3,), dtype=np.float32)
+       
+        self.agent_names = ["USDATA", "agent_2", ...]  # Or a dictionary if needed
 
         self.unbatched_observation_spec = None
         self.unbatched_reward_spec = None
