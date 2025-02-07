@@ -207,7 +207,7 @@ def _step(tensordict):
 
 
 
-
+    dones =torch.zeros(*env.batch_size, env.n_agents, dtype=torch.bool, device=env.device)
 
     dones = torch.zeros((*env.batch_size,1), dtype=torch.bool)
     nextt = TensorDict({
@@ -289,7 +289,8 @@ def _reset(self, tensordict=None, **kwargs):
 
 
     # Corrected the shape of dones to match the batch size
-    dones =torch.zeros((*self.batch_size,1), dtype=torch.bool)
+   
+    dones =torch.zeros(*self.batch_size, self.n_agents,dtype=torch.bool,device=self.device)
 
     resett = TensorDict(
         {
@@ -676,7 +677,6 @@ check_env_specs(env)
 
     
     
-
 
 
 
