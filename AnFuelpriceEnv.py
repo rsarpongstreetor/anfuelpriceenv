@@ -163,7 +163,7 @@ def _step(tensordict):
 
 
 
-    
+
 
     agent_new_obs = torch.stack(agent_new_obs_list, dim=0) # shape: [n_agents, 13, 1]
     agent_reward = torch.stack(agent_reward_list, dim=0)
@@ -175,15 +175,16 @@ def _step(tensordict):
 
 
     #Convolution Expansions
-    
+
     # Now you can safely expand with convo_dim along the middle dimension
-   
-    expanded_agent_new_obs = agent_new_obs.reshape(1, 13, 1, 1).expand( 1, 13, *env.convo_dim)
-    expanded_agent_reward = agent_reward[:,4:].reshape(agent_reward.shape[0], 9, 1, 1).expand(n_agents, 9, *env.convo_dim)
-    expanded_agent_action=  agent_action[:,4:].reshape(agent_action.shape[0], 9, 1, 1).expand(n_agents, 9, *env.convo_dim)
-    expanded_agent_Date = agent_Date.reshape(agent_Date.shape[0], 1, 1, 1).expand(n_agents, 1, *env.convo_dim) 
-   
-   
+
+    expanded_agent_new_obs = agent_new_obs.reshape(1, 13, 1, 1).expand(agent_new_obs.shape[0], 13, *env.convo_dim)
+    expanded_agent_reward = agent_reward.reshape(agent_reward.shape[0], 13, 1, 1).expand(n_agents, 13, *env.convo_dim) # Use all 13 elements
+    expanded_agent_action=  agent_action.reshape(agent_action.shape[0], 13, 1, 1).expand(n_agents, 13, *env.convo_dim) # Use all 13 elements
+    expanded_agent_Date = agent_Date.reshape(agent_Date.shape[0], 1, 1, 1).expand(n_agents, 1, *env.convo_dim)
+
+
+
 
 
     expanded_agent_Date = agent_Date.expand(*agent_Date.shape,*env.convo_dim)
@@ -193,9 +194,9 @@ def _step(tensordict):
     #Batch Expansion
     expanded_agent_reward1=expanded_agent_reward.expand(*env.batch_size,*expanded_agent_reward.shape)
     expanded_agent_new_obs1=expanded_agent_new_obs.expand(*env.batch_size, *expanded_agent_new_obs.shape)
-   
+
     expanded_agent_Date = agent_Date.reshape(agent_Date.shape[0], 1, 1, 1).expand(agent_Date.shape[0], 1, *env.convo_dim)
-    expanded_agent_Date1 = expanded_agent_Date.expand(*env.batch_size, *expanded_agent_Date.shape)  
+    expanded_agent_Date1 = expanded_agent_Date.expand(*env.batch_size, *expanded_agent_Date.shape)
 
 
 
@@ -267,12 +268,12 @@ def _reset(self, tensordict=None, **kwargs):
        agent_obs_tensor = torch.stack(agent_obs_list, dim=0)
        agent_Date_tensor = torch.stack(agent_Date_list, dim=0).float()
 
-      
+
 
        agent_obs_tensor = torch.stack(agent_obs_list, dim=0).float()
        agent_Date_tensor = torch.stack(agent_Date_list, dim=0).float()
 
-      
+
 
 
        agent_obs_tensor = agent_obs_tensor.reshape(agent_obs_tensor.shape[0], agent_obs_tensor.shape[1], 1, 1) # Adding dimensions for the convo_dim
@@ -280,16 +281,16 @@ def _reset(self, tensordict=None, **kwargs):
        agent_Date_tensor =agent_Date_tensor.reshape(agent_Date_tensor.shape[0], agent_Date_tensor.shape[-1], 1, 1) # Adding dimensions for the convo_dim
        agent_Date_tensor = agent_Date_tensor.expand(agent_Date_tensor.shape[0], 1, *self.convo_dim) # Expand to include convo_dim
 
-       
+
        # Adjust the expansion for expanded_agent_Date_tensor# Reshape and expand agent_Date_tensor to match expected shape
        expanded_agent_Date_tensor = agent_Date_tensor.expand(*self.batch_size,*agent_Date_tensor.shape) # Reshape to (1, 1) and expand
        expanded_agent_obs_tensor = agent_obs_tensor.expand(*self.batch_size, *agent_obs_tensor.shape) # expand obs to match the batch size
-       
+
 
 
 
     # Corrected the shape of dones to match the batch size
-   
+
     dones =torch.zeros(*self.batch_size, self.n_agents,dtype=torch.bool,device=self.device)
 
     resett = TensorDict(
@@ -332,23 +333,23 @@ def _make_spec(self, td_agents):
     for i in range(self.n_agents):
         agent[i]["action_spec"] =  BoundedTensorSpec( low = action_min[i],
                                                      high = action_max[i],
-                                                     shape= tuple([dim for dim in self.batch_size] if self.batch_size else [1]) + (self.n_agents)+(13,1),
+                                                     shape= (13, *self.convo_dim),
                                                      dtype=torch.float32),
 
         agent[i]["reward_spec"] =  BoundedTensorSpec(low = reward_min[i],
                                                      high = reward_max[i],
-                                                     shape= tuple([dim for dim in self.batch_size] if self.batch_size else [1]) + (self.n_agents)+(13,1),
+                                                     shape= (13, *self.convo_dim),
                                                      dtype=torch.float32),
 
 
         agent[i]["observat_spec"]  = BoundedTensorSpec(low = obs_min[i],
                                                           high =obs_max[i],
-                                                          shape= tuple([dim for dim in self.batch_size] if self.batch_size else [1]) + (self.n_agents)+(13,1),
+                                                          shape= (13, *self.convo_dim),
                                                           dtype=torch.float32),
 
         agent[i]["Date_spec"]  = BoundedTensorSpec(low = Date_min,
                                                           high =Date_max,
-                                                          shape= tuple([dim for dim in self.batch_size] if self.batch_size else [1]) + (self.n_agents,1),
+                                                          shape=(1, *self.convo_dim),
                                                           dtype=torch.float32),
 
         action_specs.append(agent[i]["action_spec"])
@@ -370,12 +371,10 @@ def _make_spec_updated(self, td_agents):
     obs_min = torch.reshape(td_agents['params', 'obsState&Fuel_min'].clone().detach(), (13,))
     reward_max = torch.reshape(td_agents['params', 'rewardState&reward_max'].clone().detach(), (13,))
     reward_min = torch.reshape(td_agents['params', 'rewardState&reward_min'].clone().detach(), (13,))
-    reward_max=reward_max[4:,]
-    reward_min=reward_min[4:,]
+
     action_max = torch.reshape(td_agents['params', 'actionState&action_max'].clone().detach(), (13,))
     action_min = torch.reshape(td_agents['params', 'actionState&action_min'].clone().detach(), (13,))
-    action_max=action_max[4:,]
-    action_min=action_min[4:,]
+
     Date_max = td_agents['params', 'Date_max'].clone().detach()
     Date_min = td_agents['params', 'Date_min'].clone().detach()
 
@@ -389,36 +388,37 @@ def _make_spec_updated(self, td_agents):
     result11 = [obs_min for _ in range(self.n_agents)]
     result00 = [obs_max for _ in range(self.n_agents)]
 
-    expand_shape = (self.n_agents, 13, *self.convo_dim)  # Change here
-    expand_shape1 = (self.n_agents, 1,*self.convo_dim)  # Change here
 
 
 
 
-    result555 = action_min.reshape(self.n_agents, 9, 1, 1).expand(self.n_agents, 9, *self.convo_dim)
-    result444 = action_max.reshape(self.n_agents, 9, 1, 1).expand(self.n_agents, 9, *self.convo_dim)
-    # For obs/rewards that may have 13 features:
-    result333 = reward_min.reshape(self.n_agents, 9, 1, 1).expand(self.n_agents, 9, *self.convo_dim)
-    result222 = reward_max.reshape(self.n_agents, 9, 1, 1).expand(self.n_agents, 9, *self.convo_dim)
-     # Reshape to (1, 13) and then expand to (n_agents, 13, *convo_dim)
-    result111 = obs_min.reshape(self.n_agents, 13, 1, 1).expand(self.n_agents, 13, *self.convo_dim)
-    result000 = obs_max.reshape(self.n_agents, 13, 1, 1).expand(self.n_agents, 13, *self.convo_dim)
+    logits_shape = (self.n_agents,13, *self.convo_dim)  # Example shape
+    date_shape = (self.n_agents,1, *self.convo_dim)  # Shape for position_key (Date)
+
+    # Ensure result variables have the correct shape
+    result555 = action_min.reshape(self.n_agents, 13,1,1).expand(self.n_agents, 13,*self.convo_dim)  # Modified to (1, 13)
+    result444 = action_max.reshape(self.n_agents, 13,1,1).expand(self.n_agents, 13,*self.convo_dim)  # Modified to (1, 13)
+    result333 = reward_min.reshape(self.n_agents, 13,1,1).expand(self.n_agents, 13,*self.convo_dim)  # Modified to (1, 13)
+    result222 = reward_max.reshape(self.n_agents, 13,1,1).expand(self.n_agents, 13,*self.convo_dim)  # Modified to (1, 13)
+    result111 = obs_min.reshape(self.n_agents, 13,1,1).expand(self.n_agents, 13,*self.convo_dim)  # Modified to (1, 13)
+    result000 = obs_max.reshape(self.n_agents, 13,1,1).expand(self.n_agents, 13,*self.convo_dim)  # Modified to (1, 13)
+    result777 = Date_max.reshape(self.n_agents,1,1,1).expand(self.n_agents, 1,*self.convo_dim) # Modified to (1, 1)
+    result666 = Date_min.reshape(self.n_agents,1,1,1).expand(self.n_agents, 1,*self.convo_dim) # Modified to (1, 1)
 
 
 
-     #Reshape tensors before expanding with the correct number of features
-    result777 = Date_max.reshape(self.n_agents, 1, 1, 1).expand(*expand_shape1)  # Use expand_shape for Date
-    result666 = Date_min.reshape(self.n_agents, 1, 1, 1).expand(*expand_shape1)  # Use expand_shape for Date
 
 
 
 
 
+
+    
     self.unbatched_action_spec = CompositeSpec(
         {"agents": {"action": BoundedTensorSpec(
             low=result555,
             high=result444,
-            shape=result555.shape,
+            shape=logits_shape,
             dtype=torch.float32,
             )}}
     )
@@ -427,7 +427,7 @@ def _make_spec_updated(self, td_agents):
          {"agents": {"reward": BoundedTensorSpec(
                 low=result333,
                 high=result222,
-                shape=result333.shape,
+                shape=logits_shape,
                 dtype=torch.float32,
             )}}
     )
@@ -438,13 +438,13 @@ def _make_spec_updated(self, td_agents):
                 "observat": BoundedTensorSpec(
                     low=result111,
                     high=result000,
-                    shape=result111.shape,
+                    shape=logits_shape,
                     dtype=torch.float32
                 ),
                 "position_key": BoundedTensorSpec(  # Include "Date" within "observation"
                     low=result666,
                     high=result777,
-                    shape=result666.shape,
+                    shape=date_shape,
                     dtype=torch.float32
                 )
             }
@@ -534,48 +534,48 @@ def full_info_spec(self):
         # For example, if it should always return an empty dictionary:
     return {}
 
-from typing import Dict, List # Import Dict and List here 
+from typing import Dict, List # Import Dict and List here
 def group_map(self, env: EnvBase) -> Dict[str, List[str]]:
         # The group map mapping group names to agent names
         # The data in the tensordict will have to be presented this way
     return {"agents": [agent.name for agent in env.agents]}
 
-   
 
 
 
 
 
-    
-    
-       
-       
+
+
+
+
+
 class AnFuelpriceEnv(EnvBase):
     metadata = {
         "render_modes": ["human", "rgb_array"],
         "render_fps": 30,
     }
     # You can use the scenario argument here if needed
-  
+
     batch_locked = False
     def __init__(self,td_params=None, seed=None, device="cpu",**kwargs):
         if td_params is None:
            td_params = self.gen_params()
 
-        _ = kwargs.pop("scenario", None)        
+        _ = kwargs.pop("scenario", None)
         # Extract the variables needed in _make_spec
         self.n_agents = 1
         self.convo_dim = [9, 9]
         self.batch_size = [10, 10]
-       
-       
+
+
 
         self.unbatched_observation_spec = None
         self.unbatched_reward_spec = None
         self.agent_tds = []
-        self.agents = [{} for _ in range(self.n_agents)]
-        self.agent_names = ["USDATA"]  # Or a dictionary if needed
-        
+        self.agents = [{"name": f"agent_{i}"} for i in range(self.n_agents)]
+        self.agents = [{"name": "USDATA"}] # Change here: Make agents a list of dictionaries with a "name" key
+
 
 
 
@@ -587,70 +587,70 @@ class AnFuelpriceEnv(EnvBase):
         if seed is None:
             seed = torch.empty((), dtype=torch.int64).random_().item()
         self.set_seed(seed)
-    
+
     def get_supports_continuous_actions(self):
         from torchrl.data import BoundedTensorSpec, UnboundedContinuousTensorSpec, DiscreteTensorSpec
           # Check if your environment supports continuous actions
           # and return True or False accordingly
           # For example, if your environment uses Box action spaces:
         return hasattr(env.full_action_spec, 'shape') and len(env.full_action_spec.shape) > 0
-       
+
     def get_supports_discrete_actions(self):
         from torchrl.data import BoundedTensorSpec, UnboundedContinuousTensorSpec, DiscreteTensorSpec
           # Check if your environment supports continuous actions
           # and return True or False accordingly
           # For example, if your environment uses Box action spaces:
         return isinstance(env.full_action_spec, DiscreteTensorSpec) #fixed indentation here by ensuring it aligns with the 'return' statement
-    
-    
+
+
     @property
-    def get_env_name(): 
+    def get_env_name():
         return "AnFuelpriceEnv"
-    
+
     def get_observation_spec(self):
         return self.observation_spec
-   
+
     def get_full_action_spec(self):
         return self.full_action_spec
-   
+
     def get_full_reward_spec(self):
         return self.full_reward_spec
-    
+
     def get_done_spec(self):
         return self.done_spe
     def get_group_map(self, env: EnvBase) -> Dict[str, List[str]]:
         # The group map mapping group names to agent names
         # The data in the tensordict will have to be presented this way
-        return {"agents": [agent.name for agent in env.agents]}
-   
+       return {"agents": [agent["name"] for agent in env.agents]} #Access 'name' using dictionary key
+
     @property
     def terminated_spec(self):
         return self.done_spec
     @property
     def truncated_spec(self):
         return self.done_spec
-   
+
     def get_full_info_spec(self):
         return {}
-    
+
     def get_discount_spec(self):
-        return self.discount_spec      
+        return self.discount_spec
 
     # Helpers: _make_step and gen_params
     gen_params =staticmethod(gen_params)
     _make_spec = _make_spec_updated  #
-    
-    
+
+
 
     # Mandatory methods: _step, _reset and _set_seed
     _reset = _reset
     _step = staticmethod(_step)
     _set_seed = _set_seed
     full_info_spec = full_info_spec
-    
-   
-    
-   
+
+
+
+
 
 env = AnFuelpriceEnv()
 
@@ -675,8 +675,8 @@ check_env_specs(env)
 
 
 
-    
-    
+
+
 
 
 
