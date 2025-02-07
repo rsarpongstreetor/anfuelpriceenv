@@ -1,0 +1,13 @@
+
+
+defaults:
+  - customenv_task_2_config
+  - _self_
+
+
+max_steps: 100
+supports_continuous_actions: True
+supports_discrete_actions: True
+env_name: "AnFuelpriceEnv"
+
+
