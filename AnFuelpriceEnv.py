@@ -136,39 +136,56 @@ class DDataenv:
 
 from types import new_class
 def _step(tensordict):
+    td=env.gen_params()
     n_agents = env.n_agents
+    
     agent_new_obs_list=[]
     agent_reward_list=[]
-    agent_action_list=[]
     agent_Date_list=[]
-
-
-
+    agent_action_list=[]
 
     #n_agents Iteration
     for j in range(n_agents):
-        td=env.gen_params()
-        obs=torch.reshape(td['params','obsState&Fuel'].clone().detach(),(13,))
-        reward=torch.reshape(td['params','rewardState&reward'].clone().detach(),(13,))
-        action=torch.reshape(td['params','actionState&action'].clone().detach(),(13,))
-        Date=torch.reshape(td['params','Date'].clone().detach(),(1,))
-        new_obs = torch.add(obs, torch.stack([action_i * reward_i for action_i, reward_i in zip(action, reward)]))
-        new_obs=torch.reshape(new_obs,(13,))
+        # Initialize lists to store data for each agent within the batch
+        agent_i_Date = []
+        agent_i_action = []
+        agent_i_rew = []
+        agent_i_new_obs = []
 
 
-        agent_new_obs_list.append(new_obs)
-        agent_reward_list.append(reward)
-        agent_Date_list.append(Date)
-        agent_action_list.append(action)
+        for batch_index in range(env.batch_size[1]): #Assuming batch_size is a tuple or list, use the first element
+           # Generate parameters for the current batch index:
+          current_td = env.gen_params(batch_size=[1])  #Batch size of 1 for each iteration
 
+          obs=torch.reshape(td['params','obsState&Fuel'].clone().detach(),(13,))
+          reward=torch.reshape(td['params','rewardState&reward'].clone().detach(),(13,))
+          action=torch.reshape(td['params','actionState&action'].clone().detach(),(13,))
+          Date=torch.reshape(td['params','Date'].clone().detach(),(1,))
 
+          new_obs = torch.add(obs, torch.stack([action_i * reward_i for action_i, reward_i in zip(action, reward)]))
+          new_obs=torch.reshape(new_obs,(13,))
 
+           # Append updated data to lists:
+          agent_new_obs_list.append(new_obs)
+          agent_reward_list.append(reward)
+          agent_Date_list.append(Date)
+          agent_action_list.append(action)
 
+       # Prepare data for next step:
+        agent_new_obs = torch.stack(agent_new_obs_list, dim=0)  # shape: [batch_size[0], 13,]
+        agent_reward = torch.stack(agent_reward_list, dim=0)
+        agent_Date = torch.stack(agent_Date_list, dim=0)
+        agent_action = torch.stack(agent_action_list, dim=0)
 
-    agent_new_obs = torch.stack(agent_new_obs_list, dim=0) # shape: [n_agents, 13, 1]
-    agent_reward = torch.stack(agent_reward_list, dim=0)
-    agent_Date= torch.stack(agent_Date_list, dim=0)
-    agent_action = torch.stack(agent_action_list, dim=0)
+        #Agentiteration
+        agent_i_Date.append(agent_Date)   # shape: [batch_size[0], n_agent, 13,]
+        agent_i_action.append(agent_action)
+        agent_i_rew.append(agent_reward)
+        agent_i_new_obs.append(agent_new_obs)
+    en_Date=torch.stack(agent_i_Date, dim=1)
+    en_action=torch.stack(agent_i_action, dim=1)
+    en_reward=torch.stack(agent_i_rew, dim=1)
+    en_new_obs=torch.stack(agent_i_new_obs, dim=1)
 
 
 
@@ -178,29 +195,21 @@ def _step(tensordict):
 
     # Now you can safely expand with convo_dim along the middle dimension
 
-    expanded_agent_new_obs = agent_new_obs.reshape(1, 13, 1, 1).expand(agent_new_obs.shape[0], 13, *env.convo_dim)
-    expanded_agent_reward = agent_reward.reshape(agent_reward.shape[0], 13, 1, 1).expand(n_agents, 13, *env.convo_dim) # Use all 13 elements
-    expanded_agent_action=  agent_action.reshape(agent_action.shape[0], 13, 1, 1).expand(n_agents, 13, *env.convo_dim) # Use all 13 elements
-    expanded_agent_Date = agent_Date.reshape(agent_Date.shape[0], 1, 1, 1).expand(n_agents, 1, *env.convo_dim)
+    expanded_agent_new_obs = en_new_obs.reshape(env.batch_size[1], env.n_agents, 13, 1, 1).expand(env.batch_size[1],env.n_agents, 13, *env.convo_dim)
+    expanded_agent_reward = en_reward.reshape(env.batch_size[1], env.n_agents, 13, 1, 1).expand(env.batch_size[1],env.n_agents, 13, *env.convo_dim) # Use all 13 elements
+    expanded_agent_action=  en_action.reshape(env.batch_size[1], env.n_agents, 13, 1, 1).expand(env.batch_size[1],env.n_agents, 13, *env.convo_dim) # Use all 13 elements
+    expanded_agent_Date = en_Date.reshape(env.batch_size[1],env.n_agents, 1, 1, 1).expand(env.batch_size[1],env.n_agents, 1, *env.convo_dim)
 
 
 
-
-
-    expanded_agent_Date = agent_Date.expand(*agent_Date.shape,*env.convo_dim)
-
-
-
-    #Batch Expansion
-    expanded_agent_reward1=expanded_agent_reward.expand(*env.batch_size,*expanded_agent_reward.shape)
-    expanded_agent_new_obs1=expanded_agent_new_obs.expand(*env.batch_size, *expanded_agent_new_obs.shape)
-
-    expanded_agent_Date = agent_Date.reshape(agent_Date.shape[0], 1, 1, 1).expand(agent_Date.shape[0], 1, *env.convo_dim)
-    expanded_agent_Date1 = expanded_agent_Date.expand(*env.batch_size, *expanded_agent_Date.shape)
-
-
-
-    episode_reward=expanded_agent_reward1
+    #batch_size[1] Expansion
+    expanded_agent_reward1 = expanded_agent_reward.expand(env.batch_size[0], *expanded_agent_reward.shape)  # Remove * before env.batch_size[0]
+    expanded_agent_new_obs1 = expanded_agent_new_obs.expand(env.batch_size[0], *expanded_agent_new_obs.shape)  # Remove * before env.batch_size[0]
+    expanded_agent_action1 = expanded_agent_action.expand(env.batch_size[0], *expanded_agent_action.shape)  # Remove * before env.batch_size[0]
+    expanded_agent_Date1 = expanded_agent_Date.expand(env.batch_size[0],*expanded_agent_Date.shape)
+    
+    
+  
     observation=expanded_agent_new_obs1
     Date=expanded_agent_Date1
     reward = expanded_agent_reward1
@@ -413,7 +422,7 @@ def _make_spec_updated(self, td_agents):
 
 
 
-    
+
     self.unbatched_action_spec = CompositeSpec(
         {"agents": {"action": BoundedTensorSpec(
             low=result555,
@@ -566,7 +575,7 @@ class AnFuelpriceEnv(EnvBase):
         # Extract the variables needed in _make_spec
         self.n_agents = 1
         self.convo_dim = [9, 9]
-        self.batch_size = [1, 10]
+        self.batch_size = [10, 10]
 
 
 
