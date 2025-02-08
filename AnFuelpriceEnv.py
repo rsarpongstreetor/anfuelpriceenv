@@ -566,7 +566,7 @@ class AnFuelpriceEnv(EnvBase):
         # Extract the variables needed in _make_spec
         self.n_agents = 1
         self.convo_dim = [9, 9]
-        self.batch_size = [10, 10]
+        self.batch_size = [1, 10]
 
 
 
