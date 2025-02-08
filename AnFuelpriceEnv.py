@@ -340,9 +340,8 @@ def _make_spec(self, td_agents):
 
 
     for i in range(self.n_agents):
-        agent[i]["action_spec"] =  BoundedTensorSpec( low = action_min[i],
-                                                     high = action_max[i],
-                                                     shape= (13, *self.convo_dim),
+        agent[i]["action_spec"] =  DescreteTensorSpec( n=3,
+                                                    shape= (13, *self.convo_dim),
                                                      dtype=torch.float32),
 
         agent[i]["reward_spec"] =  BoundedTensorSpec(low = reward_min[i],
@@ -424,9 +423,8 @@ def _make_spec_updated(self, td_agents):
 
 
     self.unbatched_action_spec = CompositeSpec(
-        {"agents": {"action": BoundedTensorSpec(
-            low=result555,
-            high=result444,
+        {"agents": {"action": DiscreteTensorSpec(
+            n=3,
             shape=logits_shape,
             dtype=torch.float32,
             )}}
