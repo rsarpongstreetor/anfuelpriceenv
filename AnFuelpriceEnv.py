@@ -427,7 +427,7 @@ def _make_spec_updated(self, td_agents):
             n=3,
             shape=logits_shape,
             dtype=torch.float32,
-            )}}
+            )}}, ,shape=self.batch_size,
     )
 
     self.unbatched_reward_spec = CompositeSpec(
@@ -436,7 +436,7 @@ def _make_spec_updated(self, td_agents):
                 high=result222,
                 shape=logits_shape,
                 dtype=torch.float32,
-            )}}
+            )}},shape=self.batch_size ,
     )
 
 
@@ -455,7 +455,7 @@ def _make_spec_updated(self, td_agents):
                     dtype=torch.float32
                 )
             }
-        }}
+        }},shape=self.batch_size,
     )
 
 
