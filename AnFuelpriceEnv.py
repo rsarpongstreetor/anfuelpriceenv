@@ -153,7 +153,7 @@ def _step(tensordict):
         agent_i_new_obs = []
 
 
-        for batch_index in range(env.batch_size[1]): #Assuming batch_size is a tuple or list, use the first element
+        for convo_dim in range(env.convo_dim[0]): #Assuming batch_size is a tuple or list, use the first element
            # Generate parameters for the current batch index:
           current_td = env.gen_params(batch_size=[1])  #Batch size of 1 for each iteration
 
@@ -172,20 +172,20 @@ def _step(tensordict):
           agent_action_list.append(action)
 
        # Prepare data for next step:
-        agent_new_obs = torch.stack(agent_new_obs_list, dim=0)  # shape: [batch_size[0], 13,]
-        agent_reward = torch.stack(agent_reward_list, dim=0)
-        agent_Date = torch.stack(agent_Date_list, dim=0)
-        agent_action = torch.stack(agent_action_list, dim=0)
+        agent_new_obs = torch.stack(agent_new_obs_list, dim=-1)  # shape: [13,convo_dim[0]]
+        agent_reward = torch.stack(agent_reward_list, dim=-1)
+        agent_Date = torch.stack(agent_Date_list, dim=-1)
+        agent_action = torch.stack(agent_action_list, dim=-1)
 
         #Agentiteration
-        agent_i_Date.append(agent_Date)   # shape: [batch_size[0], n_agent, 13,]
+        agent_i_Date.append(agent_Date)   # shape: [ n_agent, 13, convo_dim[0]]
         agent_i_action.append(agent_action)
         agent_i_rew.append(agent_reward)
         agent_i_new_obs.append(agent_new_obs)
-    en_Date=torch.stack(agent_i_Date, dim=1)
-    en_action=torch.stack(agent_i_action, dim=1)
-    en_reward=torch.stack(agent_i_rew, dim=1)
-    en_new_obs=torch.stack(agent_i_new_obs, dim=1)
+    en_Date=torch.stack(agent_i_Date, dim=0)
+    en_action=torch.stack(agent_i_action, dim=0)
+    en_reward=torch.stack(agent_i_rew, dim=0)
+    en_new_obs=torch.stack(agent_i_new_obs, dim=0)
 
 
 
@@ -193,27 +193,31 @@ def _step(tensordict):
 
     #Convolution Expansions
 
-    # Now you can safely expand with convo_dim along the middle dimension
+    # Now you can safely expand with convo_dim[1] along the -1 dimension
 
-    expanded_agent_new_obs = en_new_obs.reshape(env.batch_size[1], env.n_agents, 13, 1, 1).expand(env.batch_size[1],env.n_agents, 13, *env.convo_dim)
-    expanded_agent_reward = en_reward.reshape(env.batch_size[1], env.n_agents, 13, 1, 1).expand(env.batch_size[1],env.n_agents, 13, *env.convo_dim) # Use all 13 elements
-    expanded_agent_action=  en_action.reshape(env.batch_size[1], env.n_agents, 13, 1, 1).expand(env.batch_size[1],env.n_agents, 13, *env.convo_dim) # Use all 13 elements
-    expanded_agent_Date = en_Date.reshape(env.batch_size[1],env.n_agents, 1, 1, 1).expand(env.batch_size[1],env.n_agents, 1, *env.convo_dim)
+    expanded_agent_new_obs = en_new_obs.reshape(env.n_agents, 13, env.convo_dim[0], 1).expand(env.n_agents, 13, *env.convo_dim)
+    expanded_agent_reward = en_reward.reshape(env.n_agents, 13, env.convo_dim[0], 1).expand(env.n_agents, 13, *env.convo_dim) 
+    expanded_agent_action=  en_action.reshape( env.n_agents, 13, env.convo_dim[0], 1).expand(env.n_agents, 13, *env.convo_dim) 
+    expanded_agent_Date = en_Date.reshape(env.n_agents, 1, env.convo_dim[0], 1).expand(env.n_agents, 1, *env.convo_dim)
 
 
+           
+       
 
-    #batch_size[1] Expansion
-    expanded_agent_reward1 = expanded_agent_reward.expand(env.batch_size[0], *expanded_agent_reward.shape)  # Remove * before env.batch_size[0]
-    expanded_agent_new_obs1 = expanded_agent_new_obs.expand(env.batch_size[0], *expanded_agent_new_obs.shape)  # Remove * before env.batch_size[0]
-    expanded_agent_action1 = expanded_agent_action.expand(env.batch_size[0], *expanded_agent_action.shape)  # Remove * before env.batch_size[0]
-    expanded_agent_Date1 = expanded_agent_Date.expand(env.batch_size[0],*expanded_agent_Date.shape)
+    #batch_size Expansion
+    expanded_agent_reward1 = expanded_agent_reward.expand(tuple(env.batch_size) + expanded_agent_reward.shape)  # Change to tuple for batch_size
+    expanded_agent_new_obs1 = expanded_agent_new_obs.expand(tuple(env.batch_size) + expanded_agent_new_obs.shape)  # Change to tuple for batch_size
+    expanded_agent_action1 = expanded_agent_action.expand(tuple(env.batch_size) + expanded_agent_action.shape)  # Change to tuple for batch_size
+    expanded_agent_Date1 = expanded_agent_Date.expand(tuple(env.batch_size) + expanded_agent_Date.shape)  # Change to tuple for batch_size
     
     
+   
   
     observation=expanded_agent_new_obs1
     Date=expanded_agent_Date1
     reward = expanded_agent_reward1
- # Adjust slicing if necessary
+    action = TensorDict({"agents": {"action": expanded_agent_action1}}, env.batch_size)
+  
 
 
 
@@ -425,9 +429,9 @@ def _make_spec_updated(self, td_agents):
     self.unbatched_action_spec = CompositeSpec(
         {"agents": {"action": DiscreteTensorSpec(
             n=3,
-            shape=logits_shape,
+            shape=logits_shape, 
             dtype=torch.float32,
-            )}}, ,shape=self.batch_size,
+            )}} ,
     )
 
     self.unbatched_reward_spec = CompositeSpec(
@@ -436,7 +440,7 @@ def _make_spec_updated(self, td_agents):
                 high=result222,
                 shape=logits_shape,
                 dtype=torch.float32,
-            )}},shape=self.batch_size ,
+            )}},
     )
 
 
@@ -455,7 +459,7 @@ def _make_spec_updated(self, td_agents):
                     dtype=torch.float32
                 )
             }
-        }},shape=self.batch_size,
+        }},
     )
 
 
@@ -587,9 +591,11 @@ class AnFuelpriceEnv(EnvBase):
 
 
 
+       # Convert batch_size to tuple of integers, NOT torch.Size:
+        self.batch_size_tuple = tuple(self.batch_size)
+ 
 
-
-        super().__init__(device=device, batch_size=[10,10])
+        super().__init__(device=device, batch_size=self.batch_size)
         self._make_spec(td_params)
         if seed is None:
             seed = torch.empty((), dtype=torch.int64).random_().item()
@@ -676,7 +682,6 @@ print("reward_spec:", env.reward_spec)
 td = env.reset()
 print("reset tensordict", td)
 check_env_specs(env)
-
 
 
 
