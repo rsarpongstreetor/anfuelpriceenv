@@ -10,6 +10,7 @@ setup(
         'tensordict',
         'pandas',
         'numpy',
+        'pyyaml'
         # ... add any other dependencies here
     ],
     # ... other setup options if needed
