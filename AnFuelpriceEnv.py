@@ -390,22 +390,9 @@ def _make_spec_updated(self, td_agents):
     Date_max = td_agents['params', 'Date_max'].clone().detach()
     Date_min = td_agents['params', 'Date_min'].clone().detach()
 
-    # Initialize result lists with the correct shape
-    result77 = [Date_max for _ in range(self.n_agents)]  # Use reshaped and squeezed Date_max
-    result66 = [Date_min for _ in range(self.n_agents)]  # Use reshaped and squeezed Date_min
-    result55 = [action_min for _ in range(self.n_agents)]
-    result44 = [action_max for _ in range(self.n_agents)]
-    result33 = [reward_min for _ in range(self.n_agents)]
-    result22 = [reward_max for _ in range(self.n_agents)]
-    result11 = [obs_min for _ in range(self.n_agents)]
-    result00 = [obs_max for _ in range(self.n_agents)]
+   
 
-
-
-
-
-    logits_shape = (self.n_agents,13, *self.convo_dim)  # Example shape
-    date_shape = (self.n_agents,1, *self.convo_dim)  # Shape for position_key (Date)
+    
 
     # Ensure result variables have the correct shape
     result555 = action_min.reshape(self.n_agents, 13,1,1).expand(self.n_agents, 13,*self.convo_dim)  # Modified to (1, 13)
@@ -422,14 +409,10 @@ def _make_spec_updated(self, td_agents):
 
 
 
-
-
-
-
     self.unbatched_action_spec = CompositeSpec(
         {"agents": {"action": DiscreteTensorSpec(
             n=3,
-            shape=result555, 
+            shape=result555.shape, 
             dtype=torch.float32,
             )}} ,
     )
@@ -438,7 +421,7 @@ def _make_spec_updated(self, td_agents):
          {"agents": {"reward": BoundedTensorSpec(
                 low=result333,
                 high=result222,
-                shape=result333,
+                shape=result333.shape,
                 dtype=torch.float32,
             )}},
     )
@@ -449,13 +432,13 @@ def _make_spec_updated(self, td_agents):
                 "observat": BoundedTensorSpec(
                     low=result111,
                     high=result000,
-                    shape=result111,
+                    shape=result111.shape,
                     dtype=torch.float32
                 ),
                 "position_key": BoundedTensorSpec(  # Include "Date" within "observation"
                     low=result666,
                     high=result777,
-                    shape=result666,
+                    shape=result666.shape,
                     dtype=torch.float32
                 )
             }
@@ -682,7 +665,6 @@ print("reward_spec:", env.reward_spec)
 td = env.reset()
 print("reset tensordict", td)
 check_env_specs(env)
-
 
 
 
