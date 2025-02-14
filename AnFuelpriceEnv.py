@@ -429,7 +429,7 @@ def _make_spec_updated(self, td_agents):
     self.unbatched_action_spec = CompositeSpec(
         {"agents": {"action": DiscreteTensorSpec(
             n=3,
-            shape=logits_shape, 
+            shape=result555, 
             dtype=torch.float32,
             )}} ,
     )
@@ -438,7 +438,7 @@ def _make_spec_updated(self, td_agents):
          {"agents": {"reward": BoundedTensorSpec(
                 low=result333,
                 high=result222,
-                shape=logits_shape,
+                shape=result333,
                 dtype=torch.float32,
             )}},
     )
@@ -449,13 +449,13 @@ def _make_spec_updated(self, td_agents):
                 "observat": BoundedTensorSpec(
                     low=result111,
                     high=result000,
-                    shape=logits_shape,
+                    shape=result111,
                     dtype=torch.float32
                 ),
                 "position_key": BoundedTensorSpec(  # Include "Date" within "observation"
                     low=result666,
                     high=result777,
-                    shape=date_shape,
+                    shape=result666,
                     dtype=torch.float32
                 )
             }
