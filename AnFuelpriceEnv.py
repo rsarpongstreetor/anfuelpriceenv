@@ -428,7 +428,7 @@ def _make_spec_updated(self, td_agents):
     self.unbatched_action_spec = CompositeSpec(
         {"agents": {"action": DiscreteTensorSpec(
             n=3,
-            shape=result555.shape, 
+            shape=torch.Size([13, *self.convo_dim]), 
             dtype=torch.float32,
             )}} ,
     )
@@ -437,7 +437,7 @@ def _make_spec_updated(self, td_agents):
          {"agents": {"reward": BoundedTensorSpec(
                 low=result333,
                 high=result222,
-                shape=result333.shape,
+                shape=result222.shape,
                 dtype=torch.float32,
             )}},
     )
@@ -448,7 +448,7 @@ def _make_spec_updated(self, td_agents):
                 "observat": BoundedTensorSpec(
                     low=result111,
                     high=result000,
-                    shape=result111.shape,
+                    shape=result000.shape,
                     dtype=torch.float32
                 ),
                 "position_key": BoundedTensorSpec(  # Include "Date" within "observation"
@@ -572,16 +572,11 @@ class AnFuelpriceEnv(EnvBase):
 
         if td_params is None:
            td_params = self.gen_params()
-           
+
 
         
         
-        
-        
-        
-        
-        
-        
+  
        
         _ = kwargs.pop("scenario", None)
         # Extract the variables needed in _make_spec
@@ -613,7 +608,10 @@ class AnFuelpriceEnv(EnvBase):
  
 
         super().__init__(device=device, batch_size=self.batch_size)
+        
         self._make_spec(td_params)
+        self.single_observation_space = self.observation_spec["agents"]["observation"]["observat"] # Assuming "observat" is the correct key for your single observation space
+
         if seed is None:
             seed = torch.empty((), dtype=torch.int64).random_().item()
         self.set_seed(seed)
