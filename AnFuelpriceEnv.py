@@ -342,9 +342,25 @@ def _make_spec(self, td_agents):
     Date_min=td_agents['params','Date_min'].clone().detach()
 
 
+         # Define single_observation_space using torchrl's TensorSpec
+        # Assuming your observation space is continuous and unbounded:
+        # self.single_observation_space = UnboundedContinuousTensorSpec(
+        #     shape=self.observation_space['agents']['observation']['observation'].space.shape,
+        #     dtype=torch.float32,
+        #     device=self.device
+        # )
+    
+    
+    self.single_observation_space = BoundedTensorSpec(
+            low=obs_min,
+            high=obs_max,
+            shape=obs_min.shape,  # Assuming low and high have the same shape
+            dtype=torch.float32,
+            device=self.device )
+        
 
     for i in range(self.n_agents):
-        agent[i]["action_spec"] =  DescreteTensorSpec( n=3,
+        agent[i]["action_spec"] =  DiscreteTensorSpec( n=3,
                                                     shape= (13, *self.convo_dim),
                                                      dtype=torch.float32),
 
@@ -550,25 +566,43 @@ class AnFuelpriceEnv(EnvBase):
         "render_fps": 30,
     }
     # You can use the scenario argument here if needed
-
+    Scenario="USDATA_1"
     batch_locked = False
-    def __init__(self,td_params=None, seed=None, device="cpu",**kwargs):
+    def __init__(self,td_params=None, seed=None, device="cpu", categorical_actions=True,continuous_actions=True,**kwargs):
+
         if td_params is None:
            td_params = self.gen_params()
+           
 
+        
+        
+        
+        
+        
+        
+        
+        
+       
         _ = kwargs.pop("scenario", None)
         # Extract the variables needed in _make_spec
+       
         self.n_agents = 1
         self.convo_dim = [9, 9]
         self.batch_size = [10, 10]
+       
 
 
 
         self.unbatched_observation_spec = None
         self.unbatched_reward_spec = None
         self.agent_tds = []
-        self.agents = [{"name": f"agent_{i}"} for i in range(self.n_agents)]
+        #self.agents = [{"name": f"agent_{i}"} for i in range(self.n_agents)]
         self.agents = [{"name": "USDATA"}] # Change here: Make agents a list of dictionaries with a "name" key
+
+
+        
+
+
 
 
 
@@ -583,6 +617,9 @@ class AnFuelpriceEnv(EnvBase):
         if seed is None:
             seed = torch.empty((), dtype=torch.int64).random_().item()
         self.set_seed(seed)
+
+        
+         
 
     def get_supports_continuous_actions(self):
         from torchrl.data import BoundedTensorSpec, UnboundedContinuousTensorSpec, DiscreteTensorSpec
@@ -665,7 +702,6 @@ print("reward_spec:", env.reward_spec)
 td = env.reset()
 print("reset tensordict", td)
 check_env_specs(env)
-
 
 
 
