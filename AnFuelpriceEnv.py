@@ -138,7 +138,7 @@ from types import new_class
 def _step(tensordict):
     td=env.gen_params()
     n_agents = env.n_agents
-    
+
     agent_new_obs_list=[]
     agent_reward_list=[]
     agent_Date_list=[]
@@ -182,11 +182,27 @@ def _step(tensordict):
         agent_i_action.append(agent_action)
         agent_i_rew.append(agent_reward)
         agent_i_new_obs.append(agent_new_obs)
-    en_Date=torch.stack(agent_i_Date, dim=0)
-    en_action=torch.stack(agent_i_action, dim=0)
-    en_reward=torch.stack(agent_i_rew, dim=0)
-    en_new_obs=torch.stack(agent_i_new_obs, dim=0)
+    # Check if agent_i_Date is empty before stacking. If empty, create a tensor with shape (0, 13, convo_dim[0])
+    if agent_i_Date:
+        en_Date=torch.stack(agent_i_Date, dim=0)
+    else:
+        en_Date = torch.empty(0, 13, env.convo_dim[0], device=env.device) # Create an empty tensor with the expected shape
 
+    # Similar checks and empty tensor creation for en_action, en_reward, en_new_obs
+    if agent_i_action:
+        en_action=torch.stack(agent_i_action, dim=0)
+    else:
+        en_action = torch.empty(0, 13, env.convo_dim[0], device=env.device)
+
+    if agent_i_rew:
+        en_reward=torch.stack(agent_i_rew, dim=0)
+    else:
+        en_reward = torch.empty(0, 13, env.convo_dim[0], device=env.device)
+
+    if agent_i_new_obs:
+        en_new_obs=torch.stack(agent_i_new_obs, dim=0)
+    else:
+        en_new_obs = torch.empty(0, 13, env.convo_dim[0], device=env.device)
 
 
 
@@ -194,30 +210,41 @@ def _step(tensordict):
     #Convolution Expansions
 
     # Now you can safely expand with convo_dim[1] along the -1 dimension
+    if len(en_new_obs.shape) < 4:
+        en_new_obs = en_new_obs.reshape(*en_new_obs.shape, 1, 1)  # Add extra dimensions if needed
+
+    # Similarly, ensure other tensors have at least 4 dimensions
+    if len(en_reward.shape) < 4:
+        en_reward = en_reward.reshape(*en_reward.shape, 1, 1)
+    if len(en_action.shape) < 4:
+        en_action = en_action.reshape(*en_action.shape, 1, 1)
+    if len(en_Date.shape) < 4:
+        en_Date = en_Date.reshape(*en_Date.shape, 1, 1)
+
 
     expanded_agent_new_obs = en_new_obs.reshape(env.n_agents, 13, env.convo_dim[0], 1).expand(env.n_agents, 13, *env.convo_dim)
-    expanded_agent_reward = en_reward.reshape(env.n_agents, 13, env.convo_dim[0], 1).expand(env.n_agents, 13, *env.convo_dim) 
-    expanded_agent_action=  en_action.reshape( env.n_agents, 13, env.convo_dim[0], 1).expand(env.n_agents, 13, *env.convo_dim) 
+    expanded_agent_reward = en_reward.reshape(env.n_agents, 13, env.convo_dim[0], 1).expand(env.n_agents, 13, *env.convo_dim)
+    expanded_agent_action=  en_action.reshape( env.n_agents, 13, env.convo_dim[0], 1).expand(env.n_agents, 13, *env.convo_dim)
     expanded_agent_Date = en_Date.reshape(env.n_agents, 1, env.convo_dim[0], 1).expand(env.n_agents, 1, *env.convo_dim)
 
 
-           
-       
+
+
 
     #batch_size Expansion
     expanded_agent_reward1 = expanded_agent_reward.expand(tuple(env.batch_size) + expanded_agent_reward.shape)  # Change to tuple for batch_size
     expanded_agent_new_obs1 = expanded_agent_new_obs.expand(tuple(env.batch_size) + expanded_agent_new_obs.shape)  # Change to tuple for batch_size
     expanded_agent_action1 = expanded_agent_action.expand(tuple(env.batch_size) + expanded_agent_action.shape)  # Change to tuple for batch_size
     expanded_agent_Date1 = expanded_agent_Date.expand(tuple(env.batch_size) + expanded_agent_Date.shape)  # Change to tuple for batch_size
-    
-    
-   
-  
+
+
+
+
     observation=expanded_agent_new_obs1
     Date=expanded_agent_Date1
     reward = expanded_agent_reward1
     action = TensorDict({"agents": {"action": expanded_agent_action1}}, env.batch_size)
-  
+
 
 
 
@@ -256,22 +283,21 @@ def _reset(self, tensordict=None, **kwargs):
 
        n_agents = self.n_agents
 
-          # Initialize agent list here
-       batchtentensor=[]
+
+
+
 
        agents = []
-       agent_obs_list = [] # Collect observations in a list first
-       agent_tds = []
-       agent_obs_tensor=[]
+       agent_obs_list = [] # Collect observations in a list firs
        agent_Date_list=[]
-       agent_Date_tensor=[]
+
 
           # Iterate over the DataFrame
        low_x=[]
        high_x=[]
        obs=[]
        #unbatch
-       random_numbers = torch.rand((1,), generator=self.rng, device=self.device) # Changed random number generation to accommodate batch_size and n_agents
+       random_numbers = torch.rand((n_agents,), generator=self.rng, device=self.device) # Changed random number generation to accommodate batch_size and n_agents
 
        high_x=obs_max.unsqueeze(0)
        low_x=obs_min.unsqueeze(0)
@@ -333,7 +359,9 @@ def _reset(self, tensordict=None, **kwargs):
 
 # @title Default title text
 def _make_spec(self, td_agents):
-    agent = [{} for _ in range(self.n_agents)]  # Initialize agent with the correct number of dictionaries
+    # Initialize a dictionary for each agent in the beginning
+    agent = {f"agent_{i}": {} for i in range(self.n_agents)} 
+    
     action_spec = []
     observat_spec = []
     reward_spec = []
@@ -349,6 +377,8 @@ def _make_spec(self, td_agents):
     Date_max = td_agents['params', 'Date_max'].clone().detach()
     Date_min = td_agents['params', 'Date_min'].clone().detach()
 
+
+    
     # Ensure result variables have the correct shape
     # Reshape and expand to (n_agents, 13, *convo_dim) before the loop
     result555 = action_min.reshape(1, 13, 1, 1).expand(self.n_agents, 13, *self.convo_dim)
@@ -359,91 +389,83 @@ def _make_spec(self, td_agents):
     result000 = obs_max.reshape(1, 13, 1, 1).expand(self.n_agents, 13, *self.convo_dim)
     result777 = Date_max.reshape(1, 1, 1, 1).expand(self.n_agents, 1, *self.convo_dim)
     result666 = Date_min.reshape(1, 1, 1, 1).expand(self.n_agents, 1, *self.convo_dim)
-    
-    self.single_observation_space = BoundedTensorSpec(
-            low=obs_min,
-            high=obs_max,
-            shape=obs_min.shape,  # Assuming low and high have the same shape
-            dtype=torch.float32,
-            device=self.device)
+
+   
 
     for i in range(self.n_agents):
-       # Create the dictionary for the current agent if it doesn't exist:
-        if int(i) >= len(agent):  # Check if the agent dictionary exists
-            agent.append({})  # Append a new dictionary if needed
-        # Access using int(i) after reshaping and expanding
-        
-        agent[i]["action_spec"] = DiscreteTensorSpec(
+        # Create the dictionary for the current agent using f-string formatting for the key:
+        agent[f"agent_{i}"] = {}
+
+        # Store action_spec, reward_spec, observat_spec, and Date_spec directly within the agent dictionary:
+        agent[f"agent_{i}"]["action_spec"] = DiscreteTensorSpec(
             n=3,
             shape=result444[i].shape,  # Access using i directly
-            dtype=torch.float32,)
-        agent[i]["reward_spec"] = BoundedTensorSpec(
-            low=result333[i],  # Access using i directly
-            high=result222[i],  # Access using i directly
-            shape=result222[i].shape,  # Access using i directly
-            dtype=torch.float32,)
-        agent[i]["observat_spec"] = BoundedTensorSpec(
-            low=result111[i],  # Access using i directly
-            high=result000[i],  # Access using i directly
-            shape=result000[i].shape,  # Access using i directly
-            dtype=torch.float32,)
-        agent[i]["Date_spec"] = BoundedTensorSpec(
-            low=result666[i],  # Access using i directly
-            high=result777[i],  # Access using i directly
-            shape=result666[i].shape,  # Access using i directly
-            dtype=torch.float32,)
+            dtype=torch.float32,
+        )
+        agent[f"agent_{i}"]["reward_spec"] = BoundedTensorSpec(
+            low=result333[i],
+            high=result222[i],
+            shape=result222[i].shape,
+            dtype=torch.float32,
+        )
+        agent[f"agent_{i}"]["observat_spec"] = BoundedTensorSpec(
+            low=result111[i],
+            high=result000[i],
+            shape=result000[i].shape,
+            dtype=torch.float32,
+        )
+        agent[f"agent_{i}"]["Date_spec"] = BoundedTensorSpec(
+            low=result666[i],
+            high=result777[i],
+            shape=result666[i].shape,
+            dtype=torch.float32,
+        )
 
-        action_spec.append(agent[i]["action_spec"])
-        reward_spec.append(agent[i]["reward_spec"])
-        observat_spec.append(agent[i]["observat_spec"])
-        Date_spec.append(agent[i]["Date_spec"])
-
-    # Instead of directly assigning, we now use CompositeSpec to group specs for each agent:
-    self.action_spec_updated = CompositeSpec({f"agent_{i}": spec for i, spec in enumerate(action_spec)})
-    self.reward_spec_updated = CompositeSpec({f"agent_{i}": spec for i, spec in enumerate(reward_spec)})
-    self.observat_spec_updated = CompositeSpec({f"agent_{i}": spec for i, spec in enumerate(observat_spec)})
-    self.Date_spec_updated = CompositeSpec({f"agent_{i}": spec for i, spec in enumerate(Date_spec)})
-
+    # Create CompositeSpec directly from the agent dictionary:
+    self.action_spec_updated = CompositeSpec({k: v["action_spec"] for k, v in agent.items()})
+    self.reward_spec_updated = CompositeSpec({k: v["reward_spec"] for k, v in agent.items()})
+    self.observat_spec_updated = CompositeSpec({k: v["observat_spec"] for k, v in agent.items()})
+    self.Date_spec_updated = CompositeSpec({k: v["Date_spec"] for k, v in agent.items()})
 
 # Construct CompositeSpec objects with the correct nesting and batch size
 def _make_spec_updated(self, td_agents):
     agent = [{} for _ in range(self.n_agents)]  # Initialize agent with the correct number of dictionaries
-    
-    
+
+
     # Change here: Wrap observat_spec_updated and Date_spec_updated in a CompositeSpec
     self.unbatched_observation_spec = CompositeSpec(
-        agents=CompositeSpec(  
+        agents=CompositeSpec(
             observat=self.observat_spec_updated,
             position_key=self.Date_spec_updated
         )
     )
     self.unbatched_action_spec = self.action_spec_updated
     self.unbatched_reward_spec = self.reward_spec_updated
-              
+
 
 
     # Now you can expand the specs
-    self.unbatched_done_spec = DiscreteTensorSpec(n=2, shape=torch.Size([1]), dtype=torch.bool ).to(self.device) 
-        
-   
+    self.unbatched_done_spec = DiscreteTensorSpec(n=2, shape=torch.Size([1]), dtype=torch.bool ).to(self.device)
 
-     
+
+
+
     expanded_batch_size = tuple([self.batch_size]) if isinstance(self.batch_size, int) else tuple(self.batch_size)   # Convert to a tuple of integers
-    self.action_spec = self.unbatched_action_spec.expand(self.batch_size_tuple).to(self.device) 
+    self.action_spec = self.unbatched_action_spec.expand(self.batch_size_tuple).to(self.device)
     self.observation_spec = self.unbatched_observation_spec.expand(self.batch_size_tuple).to(self.device)
     self.reward_spec = self.unbatched_reward_spec.expand(self.batch_size_tuple).to(self.device)
     self.done_spec = self.unbatched_done_spec.expand(self.batch_size_tuple).to(self.device)
 
-    
-   
+
+
     return CompositeSpec(
         agents=CompositeSpec(
             observation=CompositeSpec(
-              observat=self.observation_spec["agents"]["observat"],  
-              position_key=self.observation_spec["agents"]["position_key"], 
+              observat=self.observation_spec["agents"]["observat"],
+              position_key=self.observation_spec["agents"]["position_key"],
             ),
             reward=self.reward_spec,
-          
+
         ),
         terminated=self.done_spec,  # Include the terminated spec
     )
@@ -538,23 +560,23 @@ class AnFuelpriceEnv(EnvBase):
            td_params = self.gen_params()
 
 
-        
-        
-  
-       
+
+
+
+
         _ = kwargs.pop("scenario", None)
         # Extract the variables needed in _make_spec
-       
-        self.n_agents = 1
+
+        self.n_agents = 3
         self.convo_dim = [9, 9]
         # Change here: Set batch_size to a single integer or a tuple of integers
         self.batch_size = (10, )  # Or self.batch_size =  for a single-element tuple
-        self.batch_size_tuple = torch.Size([self.batch_size]) if isinstance(self.batch_size, int) else torch.Size(self.batch_size)  
-       
+        self.batch_size_tuple = torch.Size([self.batch_size]) if isinstance(self.batch_size, int) else torch.Size(self.batch_size)
+
 
         self.unbatched_observation_spec = CompositeSpec()
         self.unbatched_reward_spec = CompositeSpec()
-        self.unbatched_action_spec = CompositeSpec() 
+        self.unbatched_action_spec = CompositeSpec()
         self.unbatched_done_spec = CompositeSpec()
         self.unbatched_info_spec = CompositeSpec()
 
@@ -566,8 +588,8 @@ class AnFuelpriceEnv(EnvBase):
         self.done_spec_updated = CompositeSpec()
         self.info_spec_updated = CompositeSpec()
 
-        
-                
+
+
 
 
         self.unbatched_observation_spec = None
@@ -577,7 +599,7 @@ class AnFuelpriceEnv(EnvBase):
         self.agents = [{"name": "USDATA"}] # Change here: Make agents a list of dictionaries with a "name" key
 
 
-        
+
 
 
 
@@ -587,10 +609,10 @@ class AnFuelpriceEnv(EnvBase):
 
        # Convert batch_size to tuple of integers, NOT torch.Size:
         self.batch_size_tuple = tuple(self.batch_size)
- 
+
 
         super().__init__(device=device, batch_size=self.batch_size)
-        
+
         self._make_spec(td_params)
         #self.single_observation_space = self.observation_spec["agents"]["observation"]["observat"] # Assuming "observat" is the correct key for your single observation space
 
@@ -598,8 +620,8 @@ class AnFuelpriceEnv(EnvBase):
             seed = torch.empty((), dtype=torch.int64).random_().item()
         self.set_seed(seed)
 
-        
-         
+
+
 
     def get_supports_continuous_actions(self):
         from torchrl.data import BoundedTensorSpec, UnboundedContinuousTensorSpec, DiscreteTensorSpec
@@ -616,7 +638,7 @@ class AnFuelpriceEnv(EnvBase):
         return isinstance(env.full_action_spec, DiscreteTensorSpec) #fixed indentation here by ensuring it aligns with the 'return' statement
 
 
-    
+
 
     def get_observation_spec(self):
         return self.observation_spec
@@ -647,14 +669,14 @@ class AnFuelpriceEnv(EnvBase):
     def truncated_spec(self):
         return self.done_spec
 
-    
+
     @property
     def get_env_name():
         return "AnFuelpriceEnv"
 
-    
 
-   
+
+
 
     # Helpers: _make_step and gen_params
     gen_params =staticmethod(gen_params)
@@ -684,8 +706,9 @@ print("\n-reward_keys:", env.reward_keys)
 print("\n-done_keys:", env.done_keys)
 
 print("input_spec:", env.input_spec)
-print("action_spec (as defined by input_spec):", env.action_spec)
 print("reward_spec:", env.reward_spec)
+print("action_spec (as defined by input_spec):", env.action_spec)
+
 td = env.reset()
 print("reset tensordict", td)
 check_env_specs(env)
