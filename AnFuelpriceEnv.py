@@ -21,27 +21,27 @@ class DDataenv:
     def load_data(self) -> pd.DataFrame:
         if not os.path.exists(self.data_path):
             raise FileNotFoundError(f"Data file not found at {self.data_path}")
-        
+
         with open(self.data_path, 'rb') as f:
             self.data = torch.load(f, weights_only=False)
-        
+
         self.data = np.array(self.data)
         if len(self.data.shape) >= 3:
             self.data = self.data.reshape(self.data.shape[1], self.data.shape[2])
-        
+
         if not isinstance(self.data, pd.DataFrame):
             self.data = pd.DataFrame(self.data, columns=self.data_columns)
-        
+
         return self.data
 
     def get_observation(self) -> TypingDict[str, Union[np.ndarray, TypingDict[str, float]]]:
         if self.data is None:
             self.load_data()
-        
+
         random_row_index = np.random.choice(self.data.shape[0], 1, replace=False)[0]
         observation = self.data.iloc[random_row_index, :].to_numpy().astype(self.data_type)
         describe_data = self.data.describe()
-        
+
         observation_dict = {
             'obsState&Fuel': observation[0:13],
             'Date': observation[-1],
@@ -64,82 +64,79 @@ class DDataenv:
 def _step(tensordict):
     td = env.gen_params()
     n_agents = env.n_agents
-    
 
     # Initialize a dictionary to store agent data
-    agent= {f"agent_{i}": {} for i in range(n_agents)}
+    agent = {f"agent_{i}": {} for i in range(n_agents)}
 
     for j in range(n_agents):
-          # Initialize lists to store data for each agent within the batch
+        # Initialize lists to store data for each agent within the batch
         agent_i_date = []
         agent_i_action = []
         agent_i_rew = []
         agent_i_new_obs = []
 
-        for convo_dim in range(env.batch_size[0]):
-            current_td = env.gen_params(env.batch_size)  
+        for _ in range(env.batch_size[0]):
+            current_td = env.gen_params()
             obs = td['params', 'obsState&Fuel'].clone().detach()
             reward = td['params', 'rewardState&reward'].clone().detach()
             action = td['params', 'actionState&action'].clone().detach()
             Date = td['params', 'Date'].clone().detach()
 
             new_obs = torch.add(obs, torch.stack([action_i * reward_i for action_i, reward_i in zip(action, reward)]))
-            new_obs = torch.reshape(new_obs, (13,))
-                
-                # Append data to agent-specific lists
+            # new_obs = torch.reshape(new_obs, (13,))
+
+            # Append data to agent-specific lists
             agent_i_new_obs.append(new_obs)
             agent_i_rew.append(reward)
             agent_i_date.append(Date)
             agent_i_action.append(action)
 
-            # Stack data for the current agent
-        en_Date = torch.stack(agent_i_date, dim=0) if agent_i_date else torch.empty(env.batch_size, 13, device=env.device)
-        en_action = torch.stack(agent_i_action, dim=0) if agent_i_action else torch.empty(env.batch_size, 13, device=env.device)
-        en_reward = torch.stack(agent_i_rew, dim=0)
-        en_new_obs = torch.stack(agent_i_new_obs, dim=0) if agent_i_new_obs else torch.empty(env.batch_size, 13, device=env.device)
-        #print(en_new_obs.shape)
+        # Stack data for the current agent
+        en_Date = torch.stack(agent_i_date, dim=0) if agent_i_date else torch.empty(env.batch_size + (1,), device=env.device)
+        en_action = torch.stack(agent_i_action, dim=0) if agent_i_action else torch.empty(env.batch_size + (13,), device=env.device)
+        en_reward = torch.stack(agent_i_rew, dim=0) if agent_i_action else torch.empty(env.batch_size + (13,), device=env.device)
+        en_new_obs = torch.stack(agent_i_new_obs, dim=0) if agent_i_new_obs else torch.empty(env.batch_size + (13,), device=env.device)
 
-            # Expansion for batch size and convolution 
-        expanded_agent_new_obs = en_new_obs.reshape(*en_new_obs.shape,1,1).expand(tuple(env.batch_size) + ( 13, *env.convo_dim)) # Corrected expand call
-        expanded_agent_reward = en_reward.reshape(*en_new_obs.shape,1,1).expand(tuple(env.batch_size) + ( 13, *env.convo_dim)) # Corrected expand call
-        expanded_agent_action = en_action.reshape(*en_new_obs.shape,1,1).expand(tuple(env.batch_size) + ( 13, *env.convo_dim))  # Corrected expand call
-       
-        expanded_agent_Date = en_Date.reshape(*en_Date.shape, 1, 1).expand(tuple(env.batch_size) + (en_Date.shape[-1], *env.convo_dim)) # Corrected expand call
-
-          
+        # Expansion for batch size and convolution
+        expanded_agent_new_obs = en_new_obs.reshape(*en_new_obs.shape, 1, 1).expand(tuple(env.batch_size) + (13, *env.convo_dim))
+        expanded_agent_reward = en_reward.reshape(*en_reward.shape, 1, 1).expand(tuple(env.batch_size) + (13, *env.convo_dim))
+        expanded_agent_action = en_action.reshape(*en_action.shape, 1, 1).expand(tuple(env.batch_size) + (13, *env.convo_dim))
+        expanded_agent_Date = en_Date.reshape(*en_Date.shape, 1, 1).expand(tuple(env.batch_size) + (en_Date.shape[-1], *env.convo_dim))
         
-        # Store data in agent-specific dictionary
-        agent[f"agent_{j}"]["observation"] = {"observat": expanded_agent_new_obs,"position_key": expanded_agent_Date}
-          # Ensure 'reward' is under the "agents" key
-        agent[f"agent_{j}"]["reward"] = expanded_agent_reward  
-        agent[f"agent_{j}"]["action"] = expanded_agent_action  # Assuming you need action here
-        #print( agent[f"agent_{j}"]["reward"] )
-    
+        # Calculate the total reward for each agent and reshape to match reward_spec
+        expanded_agent_reward = (torch.sum(expanded_agent_reward, dim=2)).reshape((tuple(env.batch_size) + (1,) + tuple(env.convo_dim)))  
 
+        # Store data in agent-specific dictionary
+        agent[f"agent_{j}"]["observation"] = {"observat": expanded_agent_new_obs, "position_key": expanded_agent_Date}
+        agent[f"agent_{j}"]["action"] = expanded_agent_action  # Assuming you need action here
+        agent[f"agent_{j}"]["reward"] = expanded_agent_reward  # Assign the calculated total reward
+       
+        # Ensure agent reward is not None and has the expected shape
+        if agent[f"agent_{j}"]["reward"] is None:
+            agent[f"agent_{j}"]["reward"] = torch.zeros(env.batch_size + (1,) + env.convo_dim, device=env.device, dtype=torch.float32)  # Or any appropriate default value
+        
+         # Reshape reward to match reward_spec
+        agent[f"agent_{j}"]["reward"] = agent[f"agent_{j}"]["reward"].view((tuple(env.batch_size) + (1,) + tuple(env.convo_dim))) # Change here
+
+        
+    
     dones = torch.zeros((*env.batch_size, 1), dtype=torch.bool)
 
     next_tensordict = TensorDict(
         {
             "agents": {
                 f"agent_{j}": {
-                    "observation": agent[f"agent_{j}"]["observation"],  
-                    
+                    "observation": agent[f"agent_{j}"]["observation"],
                     "reward": agent[f"agent_{j}"]["reward"],  # Ensure reward is present and under "agents"
-                }  for j in range(env.n_agents)
-                
+                } for j in range(env.n_agents)
             },
             "terminated": dones.clone(),
-            
         },
         batch_size=env.batch_size,
         device=env.device,
     )
-    
-    # Explicitly setting the reward key
-    #next_tensordict["next", "reward"] = next_tensordict["agents", "reward"]  
-    
-    return next_tensordict
 
+    return next_tensordict
 
 def _reset(self, tensordict=None):
     if tensordict is not None and "_reset" not in tensordict:
@@ -160,9 +157,9 @@ def _reset(self, tensordict=None):
 
         for i in range(n_agents):
             random_numbers = torch.rand(1, device=self.device)
-            obs = torch.add(torch.mul(random_numbers, torch.add(obs_max, -obs_min)), obs_min) 
+            obs = torch.add(torch.mul(random_numbers, torch.add(obs_max, -obs_min)), obs_min)
             Date=  td['params', 'Date_max'].clone().detach()
-            
+
             obs = obs.reshape (tuple(self.batch_size) + (13,))
             Date = Date.reshape (tuple(self.batch_size) + (1,))
 
@@ -216,10 +213,19 @@ def make_composite_from_td(td):
 
 def _make_spec(self, td_agents):
 
-    action_specs = []
-    observation_specs = []
-    reward_specs = []
-    info_specs = []
+    action_spec = []
+    observation_spec = []
+    reward_spec = []
+    info_spec = []
+    observat_spec_updated = CompositeSpec()
+    Date_spec_updated = CompositeSpec()
+    selfobservation_updated = CompositeSpec()
+    reward_spec_updated = CompositeSpec()
+    done_spec_updated = CompositeSpec()
+    info_spec_updated = CompositeSpec()
+    action_spec_updated = CompositeSpec()
+
+
     td_agents = self.gen_params()  # Or td_agents = self.gen_params() if no batch size is needed
     agent = {f"agent_{i}": {} for i in range(self.n_agents)}
 
@@ -235,7 +241,7 @@ def _make_spec(self, td_agents):
     # Reshape the tensors to (n_agents, 13, *convo_dim) before the loop
     # Assuming obs_max, obs_min, reward_max, reward_min, action_max, action_min have shape (13,)
     # and Date_max, Date_min have shape (1,)
-   
+
     obs_max = obs_max.reshape(1, 13, 1, 1).expand(self.n_agents, 13, *self.convo_dim)
     obs_min = obs_min.reshape(1, 13, 1, 1).expand(self.n_agents, 13, *self.convo_dim)
     reward_max = reward_max.reshape(1, 13, 1, 1).expand(self.n_agents, 13, *self.convo_dim)
@@ -245,6 +251,7 @@ def _make_spec(self, td_agents):
     Date_max = Date_max.reshape(1, 1, 1, 1).expand(self.n_agents, 1, *self.convo_dim)
     Date_min = Date_min.reshape(1, 1, 1, 1).expand(self.n_agents, 1, *self.convo_dim)
 
+
     for i in range(self.n_agents):
         # Creating action, reward, observation, and date specs for each agent
         agent[f"agent_{i}"]["action_spec"] = DiscreteTensorSpec(n=3, shape=action_max[i].shape, dtype=torch.float32)  # Use action_max[i].shape directly
@@ -252,29 +259,34 @@ def _make_spec(self, td_agents):
         agent[f"agent_{i}"]["observat_spec"] = BoundedTensorSpec(low=obs_min[i], high=obs_max[i], shape=obs_max[i].shape, dtype=torch.float32)  # Use obs_min[i], obs_max[i], and obs_max[i].shape directly
         agent[f"agent_{i}"]["Date_spec"] = BoundedTensorSpec(low=Date_min[i], high=Date_max[i], shape=Date_max[i].shape, dtype=torch.float32)  # Use Date_min[i], Date_max[i], and Date_max[i].shape directly
 
-
+        # Calculate the reward value by summing across the convolutional dimensions
+        reward_value = torch.sum(agent[f"agent_{i}"]["reward_spec"].low, dim=0).reshape(tuple( (1,) + tuple(self.convo_dim))) # sum the reward.low along all axes other than batch axis.
+        # Assuming low and high are the same, otherwise sum reward.high similarly and define BoundedTensorSpec
+        agent[f"agent_{i}"]["reward_spec"]= BoundedTensorSpec(low=reward_value, high=reward_value, shape=reward_value.shape, dtype=torch.float32)
     # Creating CompositeSpecs for action, reward, observation, and date
-    self.action_spec_updated = CompositeSpec({k: v["action_spec"] for k, v in agent.items()})
-    self.reward_spec_updated = CompositeSpec({k: v["reward_spec"] for k, v in agent.items()})
-    self.observat_spec_updated = CompositeSpec({k: v["observat_spec"] for k, v in agent.items()})
-    self.Date_spec_updated = CompositeSpec({k: v["Date_spec"] for k, v in agent.items()})
+    #action_spec_updated = CompositeSpec({k: v["action_spec"] for k, v in agent.items()})
+    action_spec_updated =CompositeSpec({k: v["action_spec"] for k, v in agent.items()})
+    reward_spec_updated = CompositeSpec({k: v["reward_spec"] for k, v in agent.items()})
+    observat_spec_updated = CompositeSpec({k: v["observat_spec"] for k, v in agent.items()})
+    Date_spec_updated = CompositeSpec({k: v["Date_spec"] for k, v in agent.items()})
 
     # Creating unbatched observation, action, and reward specs
-    self.unbatched_observation_spec = CompositeSpec(
+    unbatched_observation_spec = CompositeSpec(
         agents=CompositeSpec(
-            observat=self.observat_spec_updated,
-            position_key=self.Date_spec_updated,
+            observat=observat_spec_updated,
+            position_key=Date_spec_updated,
         )
     )
-    self.unbatched_action_spec = self.action_spec_updated
-    self.unbatched_reward_spec = self.reward_spec_updated
-    self.unbatched_done_spec = DiscreteTensorSpec(n=2, shape=torch.Size([1]), dtype=torch.bool).to(self.device)
-    # # Expanding specs to include batch size
+    unbatched_action_spec = CompositeSpec(action_spec_updated)
+    unbatched_reward_spec =  CompositeSpec(reward_spec_updated)
+    unbatched_done_spec = DiscreteTensorSpec(n=2, shape=torch.Size([1]), dtype=torch.bool).to(self.device)
+    
+    # Expanding specs to include batch size
    
-    self.action_spec = self.unbatched_action_spec.expand(self.batch_size_tuple).to(self.device)
-    self.observation_spec = self.unbatched_observation_spec.expand(self.batch_size_tuple).to(self.device)
-    self.reward_spec = self.unbatched_reward_spec.expand(self.batch_size_tuple).to(self.device)
-    self.done_spec = self.unbatched_done_spec.expand(self.batch_size_tuple).to(self.device)
+    self.action_spec = unbatched_action_spec.expand(self.batch_size_tuple).to(self.device)
+    self.observation_spec = unbatched_observation_spec.expand(self.batch_size_tuple).to(self.device)
+    self.reward_spec = unbatched_reward_spec.expand(self.batch_size_tuple).to(self.device)
+    self.done_spec = unbatched_done_spec.expand(self.batch_size_tuple).to(self.device)
 
     # Creating a CompositeSpec to represent the environment's spec
     return CompositeSpec(
@@ -284,24 +296,16 @@ def _make_spec(self, td_agents):
                 position_key=self.observation_spec["agents"]["position_key"],
             ),
             reward=self.reward_spec,
-           
+
+           envaction=self.action_spec,
+
         ),
         terminated=self.done_spec,
     )
-    
-
-
-    
 
 
 
-    
-   
 
-    # Creating unbatched done spec
-    
-
-    
 
 def gen_params(batch_size=torch.Size()) -> TensorDictBase:
     if batch_size is None or (isinstance(batch_size, list) and len(batch_size) == 0):
@@ -355,29 +359,24 @@ class AnFuelpriceEnv(EnvBase):
 
 
 
-        self.n_agents = 3
+        self.n_agents = 1
         self.convo_dim = [9, 9]
         self.batch_size = (10,10) # Corrected batch size to a single-element tuple
         self.batch_size_tuple = torch.Size([self.batch_size]) if isinstance(self.batch_size, int) else torch.Size(self.batch_size)
-
-        self.observat_spec_updated = CompositeSpec()
-        self.Date_spec_updated = CompositeSpec()
-        self.observation_updated = CompositeSpec()
-        self.reward_spec_updated = CompositeSpec()
-        self.done_spec_updated = CompositeSpec()
-        self.info_spec_updated = CompositeSpec()
-        self.action_spec_updated = CompositeSpec()
-
         
+
+
 
         super().__init__(device=device, batch_size=self.batch_size,)
-        
+
 
         self._make_spec(td_params)
 
         if seed is None:
             seed = torch.empty((), dtype=torch.int64).random_().item()
         self.set_seed(seed)
+
+
 
     def get_supports_continuous_actions(self):
         return hasattr(env.full_action_spec, 'shape') and len(env.full_action_spec.shape) > 0
@@ -399,7 +398,7 @@ class AnFuelpriceEnv(EnvBase):
 
     def get_group_map(self, env: EnvBase) -> Dict[str, List[str]]:
         return {"agents": [agent["name"] for agent in env.agents]}
-  
+
     def get_full_info_spec(self):
         return {}
 
@@ -444,23 +443,8 @@ td = env.reset()
 print("reset tensordict", td)
 
 
-from torchrl.envs import Compose # Import Compose
-
-env = TransformedEnv(
-    env,
-    Compose(  # Use Compose to combine transforms
-        [
-            RewardSum(in_keys=[("agents", "agent_0", "reward")], out_keys=[("agents", "agent_0", "episode_reward")]),
-            RewardSum(in_keys=[("agents", "agent_1", "reward")], out_keys=[("agents", "agent_1", "episode_reward")]),
-            RewardSum(in_keys=[("agents", "agent_2", "reward")], out_keys=[("agents", "agent_2", "episode_reward")]),
-        ]
-    )
-)
-
-
-
-
-
 
 check_env_specs(env)
+
+
 
