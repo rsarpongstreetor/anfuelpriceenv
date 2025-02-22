@@ -359,7 +359,7 @@ class AnFuelpriceEnv(EnvBase):
 
 
 
-        self.n_agents = 1
+        self.n_agents = 2
         self.convo_dim = [9, 9]
         self.batch_size = (10,10) # Corrected batch size to a single-element tuple
         self.batch_size_tuple = torch.Size([self.batch_size]) if isinstance(self.batch_size, int) else torch.Size(self.batch_size)
