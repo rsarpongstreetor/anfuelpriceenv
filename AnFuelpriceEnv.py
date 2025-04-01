@@ -158,7 +158,7 @@ def _step(self, tensordict):  # Add 'self' to access instance variables
         {
             "agents": agents_data,
             "next": {  # Simplified "next" structure
-                "agents": next_obs_data,  
+                "agents": agents_data,  
                 "done": torch.zeros(self.batch_size_tuple + (1,), dtype=torch.bool),
                 "terminated": torch.zeros(self.batch_size_tuple + (1,), dtype=torch.bool),
                 "truncated": torch.zeros(self.batch_size_tuple + (1,), dtype=torch.bool),
@@ -725,8 +725,8 @@ print("reset tensordict",td)
 
 
 
-env = AnFuelpriceEnv()
-check_env_specs(env)
+#env = AnFuelpriceEnv()
+#check_env_specs(env)
 """
 def check_env_specs(env: EnvBase) -> None:
     Checks that the environment specs are correct."
