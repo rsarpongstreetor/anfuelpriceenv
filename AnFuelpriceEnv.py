@@ -754,5 +754,5 @@ def check_env_specs(env: EnvBase) -> None:
     print("reset tensordict",td)
     #print("_step tensordict",td)
 
-check_env_specs(env)
+#check_env_specs(env)
 """
