@@ -436,15 +436,14 @@ def _reset(self, tensordict=None, **kwargs):
 def gen_params(batch_size=torch.Size()) -> TensorDictBase:
     if batch_size is None or (isinstance(batch_size, list) and len(batch_size) == 0):
         batch_size = torch.Size([])
-    data_path = '/content/drive/MyDrive/deep learning codes/EIAAPI_DOWNLOAD/solutions/mergedata/DataDic.pt'
+    
     data_columns = ['Forex', 'WTI', 'Brent', 'OPEC', 'Fuelprice5', 'Fuelprice6', 'Fuelprice7', 'Fuelprice8',
                     'Fuelprice9', 'Fuelprice10', 'Fuelprice11', 'Fuelprice12', 'Fuelprice13',
                     'reward0', 'reward1', 'reward2', 'reward3', 'reward4', 'reward5', 'reward6', 'reward7', 'reward8',
                     'reward9', 'reward10', 'reward11', 'reward12',
                     'action0', 'action1', 'action2', 'action3', 'action4', 'action5', 'action6', 'action7', 'action8',
                     'action9', 'action10', 'action11', 'action12', 'Date']
-    envv = DDataenv(data_path, data_columns)  # Assuming DDataenv is your data environment class
-
+    
     ac = envv.get_observation()
 
     if batch_size:
