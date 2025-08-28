@@ -10,8 +10,22 @@ setup(
         'tensordict',
         'pandas',
         'numpy',
-        'pyyaml'
+        'pyyaml',
+        'torch_geometric',
+        'ipdb',
+        'gymnasium',
+        'pyyaml',
+        'wandb',
+        'tensorboard',
+        
+        
+        
+        
+        
+        'pyg_lib torch_scatter torch_sparse torch_cluster torch_spline_conv',
+        
         # ... add any other dependencies here
     ],
     # ... other setup options if needed
 )
+
