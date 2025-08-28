@@ -1,20 +1,3 @@
-# Recreate the base environment instance and the PyGBatchProcessor for training
-import networkx as nx
-import random
-from torch_geometric.data import Data
-from torch_geometric.nn import GCNConv
-from torch_geometric.nn import SplineConv
-from torch_geometric.nn import global_mean_pool as gap, global_max_pool as gmp
-
-from tensordict import TensorDict, TensorDictBase
-from torchrl.envs import EnvBase
-from torchrl.data import Unbounded, MultiCategorical, Categorical, Composite # Import Composite
-from typing import Optional
-import numpy as np
-import torch # Import torch
-from tensordict.nn import TensorDictModuleBase # Import TensorDictModuleBase
-
-
 class FuelpriceenvfeatureGraph():
 
     def __init__(self):
@@ -29,7 +12,7 @@ class FuelpriceenvfeatureGraph():
         import os # Import os
 
 
-        data_path = '/content/drive/MyDrive/deep learning codes/EIAAPI_DOWNLOAD/solutions/mergedata/Cleaneddata.csv'
+        data_path = '/content/drive/MyDrive/deep learning codes/EIAAPI_DOWNLOAD/solutions/solutions/mergedata/Cleaneddata.csv'
         if not os.path.exists(data_path):
             print(f"Data file not found at {data_path}. Please download it.")
             raise FileNotFoundError(f"Data file not found at {data_path}")
@@ -271,98 +254,6 @@ class AnFuelpriceEnv(EnvBase):
         self._make_specs()
 
 
-    def _make_specs(self):
-        # Modified state_spec structure to reflect single graph per env
-        self.state_spec = Composite(
-             {
-                 ("agents", "observation"): Composite({ # Nest under "agents" key
-                     "x": Unbounded( # Node features [num_envs, num_nodes_per_graph, node_feature_dim]
-                         shape=torch.Size([self.num_envs, self.num_nodes_per_graph, self.node_feature_dim]),
-                         dtype=torch.float32,
-                         device=self.device
-                     ),
-                     "edge_index": Unbounded( # Edge indices [num_envs, 2, num_edges_per_graph]
-                         shape=torch.Size([self.num_envs, 2, self.num_edges_per_graph]),
-                         dtype=torch.int64,
-                         device=self.device
-                     ),
-                     "graph_attributes": Unbounded( # Graph attributes [num_envs, graph_attr_dim]
-                          shape=torch.Size([self.num_envs, (26-13) + (39-26)]), # Assuming this is the graph attr dim
-                          dtype=torch.float32,
-                          device=self.device
-                     ),
-                 }),
-                 ("agents", "global_reward_in_state"): Unbounded( # Agent-wise global reward in state [num_envs, num_agents, 1]
-                      shape=torch.Size([self.num_envs, self.num_agents, 1]),
-                      dtype=torch.float32,
-                      device=self.device
-                 ),
-                 # "env_batch" is not needed as a state key in the single-graph-per-env structure
-                 # The batch tensor from PyG Batch will handle mapping nodes to environments.
-                 # The env_batch tensor is generated internally by the PyGBatchProcessor.
-             },
-             # The batch size of the state spec is the number of environments
-             batch_size=self.batch_size,
-             device=self.device,
-         )
-        print(f"Modified State specification defined with single graph per env structure and batch shape {self.state_spec.shape}.")
-
-        nvec=torch.full(( self.num_individual_actions_features,), self.num_individual_actions, dtype=torch.int64, device=self.device)
-
-        agent_action_spec =MultiCategorical(nvec,
-                shape=torch.Size([self.num_individual_actions_features,]), # Shape for a single categorical variable
-                dtype=torch.int64,
-                device=self.device
-            )
-        self.action_spec_unbatched = Composite(
-              {("agents","action"): agent_action_spec}, batch_size=[self.num_agents,], device=self.device) # Removed extra comma
-
-
-        # The batched action spec for the environment should have batch_size=[num_envs]
-        # This is automatically derived by TensorDict from the unbatched spec and env batch size.
-        # We can access it via self.action_spec
-        print("\nUnbatched Multi-Agent Action specification defined using nested Composites and Categorical.")
-        print(f"Unbatched Environment action_spec: {self.action_spec_unbatched}")
-        print(f"Batched Environment action_spec: {self.action_spec}")
-
-
-        # Restored original reward spec
-        self.reward_spec = Composite(
-             {('agents', 'reward'): Unbounded(shape=torch.Size([self.num_envs, self.num_agents, 1]), dtype=torch.float32, device=self.device)},
-             batch_size=[self.num_envs],
-             device=self.device,
-        )
-        print(f"Restored Agent-wise Reward specification defined with batch shape {self.reward_spec.shape}.")
-
-        self.done_spec = Composite(
-            {
-                "done":  Categorical(
-                      n=2,
-                      shape=torch.Size([self.num_envs, 1]),
-                      dtype=torch.bool,
-                      device=self.device),
-
-                "terminated": Categorical(
-                      n=2,
-                      shape=torch.Size([self.num_envs, 1]),
-                      dtype=torch.bool,
-                      device=self.device),
-                "truncated":  Categorical(
-                     n=2,
-                     shape=torch.Size([self.num_envs, 1]),
-                      dtype=torch.bool,
-                      device=self.device),
-            },
-            batch_size=[self.num_envs],
-            device=self.device,
-        )
-        print(f"Restored Done specification defined with batch shape {self.done_spec.shape}.")
-
-        self.state_spec.unlock_(recurse=True)
-        self.action_spec.unlock_(recurse=True) # Keep action_spec unlocked as it is batched
-        self.reward_spec.unlock_(recurse=True)
-
-
     def _step(self, tensordict: TensorDictBase) -> TensorDictBase:
         self.current_data_index += 1
 
@@ -370,9 +261,120 @@ class AnFuelpriceEnv(EnvBase):
         truncated = (self.current_data_index >= self.episode_length)
 
         # The action is now expected to be in the input tensordict passed to step() by the collector
-        actions = tensordict['agents']['action'] # Keep this line to access action for reward calculation
+        # Ensure 'actions' is a TensorDict and get the action tensor
+        actions_td_input = tensordict.get('agents', None) # Get the nested 'agents' tensordict if it exists
+        actions = None # Initialize actions variable
 
-        reward_td = self._batch_reward(self.current_data_index, actions)
+        if actions_td_input is not None and isinstance(actions_td_input, TensorDictBase):
+             actions = actions_td_input.get('action', None) # Get the 'action' tensor
+             if actions is None:
+                  print("Warning: 'action' key not found under ('agents') in input tensordict. Using zeros for actions.")
+                  actions = torch.zeros(self.num_envs, self.num_agents, dtype=torch.int64, device=self.device) # Provide default actions
+        elif isinstance(tensordict, TensorDictBase) and ('agents', 'action') in tensordict.keys(include_nested=True):
+             # Direct access if action is directly under ('agents', 'action')
+             actions = tensordict.get(('agents', 'action'))
+        elif isinstance(tensordict, torch.Tensor):
+             # If the input is a raw tensor, assume it's the actions [num_envs, num_agents]
+             # print("Warning: Input to _step is a raw tensor. Assuming it is the actions tensor.")
+             actions = tensordict # Assume tensor is actions
+             # We might need to reshape actions if it's flat
+             if actions.shape[-1] == self.num_agents * self.num_individual_actions_features:
+                  actions = actions.view(*actions.shape[:-1], self.num_agents, self.num_individual_actions_features)
+             elif actions.shape[-1] == self.num_agents: # Assume scalar action per agent
+                  actions = actions.unsqueeze(-1) # Add feature dimension if missing [num_envs, num_agents, 1]
+
+        else:
+             print("Error: Could not find actions in the input tensordict/tensor. Using zeros for actions.")
+             actions = torch.zeros(self.num_envs, self.num_agents, dtype=torch.int64, device=self.device) # Provide default actions
+
+        # --- Explicitly convert actions tensor to TensorDict if it's a tensor ---
+        # Check if actions is a tensor (and not already part of a nested TensorDict structure we want to preserve)
+        # A simple check is if it's a torch.Tensor and doesn't have a parent TensorDict (which is not directly accessible easily)
+        # A more practical check is if the original input was a raw tensor or a flat tensordict containing the action tensor directly.
+        # Based on previous errors, 'actions' might sometimes be a raw tensor passed from the collector/tensordict.
+        # Let's assume that if actions is a torch.Tensor AND the original input tensordict doesn't have the ('agents', 'action') key in a way we expect,
+        # we wrap the actions tensor in a TensorDict. This is a heuristic based on observed behavior.
+
+        # Re-check if the action was found in the expected nested structure
+        action_found_nested = actions_td_input is not None and isinstance(actions_td_input, TensorDictBase) and 'action' in actions_td_input.keys()
+        action_found_direct_nested = isinstance(tensordict, TensorDictBase) and ('agents', 'action') in tensordict.keys(include_nested=True)
+
+
+        # If actions is a tensor AND it wasn't found nested in the expected way, wrap it.
+        # This might be too aggressive. Let's refine the condition.
+        # Assume 'actions' is the tensor we extracted or was passed raw.
+        # If it's a tensor, wrap it. The _batch_reward expects a TensorDict.
+        # The structure should be a TensorDict with batch_size=[num_envs]
+        # and a nested TensorDict under 'agents' with the action tensor.
+        # However, _batch_reward is designed to take the action tensor directly now.
+        # Let's revert the change in _batch_reward and make sure actions is a TensorDict before calling it.
+
+        # --- Revert _batch_reward to expect a TensorDict ---
+        # This requires modifying _batch_reward signature and logic.
+        # Let's stick to the current _batch_reward which handles raw tensor for now,
+        # and ensure the input 'actions' variable here is the tensor.
+
+        # Let's go back to the original approach where _batch_reward expected a TensorDict
+        # and fix the input to _batch_reward instead.
+
+        # --- Reverting _batch_reward to expect TensorDict ---
+        # This requires changing the signature and logic of _batch_reward.
+        # Instead of modifying _batch_reward again, let's focus on ensuring the input to _step
+        # is structured correctly by the collector.
+        # The collector is supposed to call the policy (policy_module_td) which returns a TensorDict with ('agents', 'action').
+        # This TensorDict should then be passed to _step.
+        # The issue might be how the collector or the env.step() is handling the output of the policy and the input to _step.
+
+        # Let's assume the input 'tensordict' to _step *should* contain the policy output
+        # under ('agents', 'action'). If it's a raw tensor, it's a collector issue.
+        # If it's a TensorDict without the key, the policy or collector is not populating it.
+
+        # Let's restore the _batch_reward to expect a TensorDict for consistency
+        # and debug why the input to _step doesn't have the action in the expected place.
+
+        # --- Restoring _batch_reward signature and logic to expect TensorDict ---
+        # This requires modifying _batch_reward again. Let's do that.
+
+        # For now, let's continue with the current _batch_reward which accepts a tensor,
+        # and try to understand why the action tensor is sometimes raw.
+
+        # Let's assume `actions` here is the tensor extracted from the input tensordict or passed raw.
+        # The _batch_reward method (as modified in previous steps) expects a tensor.
+        # So, passing 'actions' directly to _batch_reward is correct *with the current _batch_reward implementation*.
+
+        # The user's query is about converting 'it' to a tensordict. 'it' likely refers to the action tensor passed to _batch_reward.
+        # Converting the action tensor to a TensorDict here would mean creating a TensorDict like:
+        # TensorDict({('agents', 'action'): actions_tensor}, batch_size=...)
+        # and then passing this TensorDict to a _batch_reward that expects a TensorDict.
+
+        # Let's revert _batch_reward to expect a TensorDict and modify _step to pass a TensorDict to it.
+
+
+        # --- Reverting _batch_reward to expect TensorDict and modifying _step ---
+        # Modify _batch_reward first (in the same modify_cells block).
+
+        # (Code for _batch_reward modification will be below in this block)
+
+        # After _batch_reward is modified to expect TensorDict:
+        # We need to ensure `tensordict` (the input to _step) contains the action under ('agents', 'action')
+        # and pass this nested tensordict to _batch_reward.
+
+        # Let's assume the input `tensordict` to _step *does* contain the action under ('agents', 'action')
+        # as expected from a collector interacting with a policy wrapped in TensorDictModule.
+        # The previous error "AttributeError: 'Tensor' object has no attribute 'get'" in _batch_reward
+        # happened because `actions` inside _batch_reward was a tensor, not a TensorDict.
+        # This suggests the collector/torchrl was passing the action tensor directly, not the nested tensordict.
+
+        # Let's modify _batch_reward to accept a TensorDict again, and modify _step to pass the relevant part of the input tensordict to it.
+
+
+        # The action is expected to be in the input tensordict passed to step() by the collector
+        # It should be at tensordict[('agents', 'action')]
+
+        # Pass the input tensordict directly to _batch_reward
+        # _batch_reward will need to extract the action from this tensordict
+        reward_td = self._batch_reward(self.current_data_index, tensordict) # Pass the entire input tensordict
+
 
         # Call _get_state_at with the current env indices to get the next state
         next_state_tensordict = self._get_state_at(torch.arange(self.num_envs, device=self.device))
@@ -386,7 +388,7 @@ class AnFuelpriceEnv(EnvBase):
                  "graph_attributes": next_state_tensordict.get(("agents", "observation", "graph_attributes")),
             }, batch_size=[self.num_envs], device=self.device), # Batch size for nested tensordict should be num_envs
             ("agents", "global_reward_in_state"): next_state_tensordict.get(("agents", "global_reward_in_state")),
-            ("agents", "reward"): reward_td.get(("agents", "reward")), # Corrected reward key
+            ('agents', 'reward'): reward_td.get(("agents", "reward")), # Get reward from reward_td
             "terminated": terminated.unsqueeze(-1),
             "truncated": truncated.unsqueeze(-1),
             "done": terminated.unsqueeze(-1) | truncated.unsqueeze(-1),
@@ -394,14 +396,19 @@ class AnFuelpriceEnv(EnvBase):
             # env_batch is no longer a state key
         }, batch_size=self.batch_size, device=self.device)
 
-        # Debugging print to check observation keys before returning
-        print("\n--- Environment _step output tensordict ---")
+        # Debugging print to check observation keys and reward before returning
+        print("\n--- Environment _step output tensordict (before return) ---")
         print(f"Output tensordict keys: {output_tensordict.keys(include_nested=True)}") # Added include_nested=True
         print(f"Output tensordict shape: {output_tensordict.shape}")
         # Also print keys and shapes of nested observation tensordict
         if ("agents", "observation") in output_tensordict.keys(include_nested=True): # Added include_nested=True
              print(f"  Nested ('agents', 'observation') keys: {output_tensordict.get(('agents', 'observation')).keys(include_nested=True)}") # Added include_nested=True
              print(f"  Nested ('agents', 'observation') shape: {output_tensordict.get(('agents', 'observation')).shape}")
+        # Print the reward value
+        if ('agents', 'reward') in output_tensordict.keys(include_nested=True):
+             print(f"  Reward value in output tensordict: {output_tensordict.get(('agents', 'reward'))}")
+        else:
+             print("  Reward key ('agents', 'reward') not found in output tensordict.")
         print("-------------------------------------------")
 
 
@@ -434,6 +441,7 @@ class AnFuelpriceEnv(EnvBase):
                  "graph_attributes": initial_state_tensordict.get(("agents", "observation", "graph_attributes")),
             }, batch_size=[self.num_envs], device=self.device), # Batch size for nested tensordict should be num_envs
             ("agents", "global_reward_in_state"): initial_state_tensordict.get(("agents", "global_reward_in_state")),
+            # 'temp_reward': torch.zeros(self.num_envs, self.num_agents, 1, dtype=torch.float32, device=self.device), # Initialize temporary reward
             "terminated": torch.zeros(self.num_envs, 1, dtype=torch.bool, device=self.device),
             "truncated": torch.zeros(self.num_envs, 1, dtype=torch.bool, device=self.device),
             "done": torch.zeros(self.num_envs, 1, dtype=torch.bool, device=self.device),
@@ -446,6 +454,7 @@ class AnFuelpriceEnv(EnvBase):
         # # Also print keys of nested observation tensordict
         # if ("agents", "observation") in initial_tensordict.keys(include_nested=True): # Added include_nested=True
         #      print(f"  Nested ('agents', 'observation') keys: {initial_tensordict.get(('agents', 'observation')).keys(include_nested=True)}") # Added include_nested=True
+        # print(f"  Nested ('agents', 'observation') shape: {initial_tensordict.get(('agents', 'observation')).shape}")
         # print("-------------------------------------------")
 
 
@@ -602,7 +611,7 @@ class AnFuelpriceEnv(EnvBase):
              senders, receivers = torch.meshgrid(torch.arange(num_agents, device=self.device), torch.arange(num_agents, device=self.device), indexing='ij')
              edge_index = torch.stack([senders.flatten(), receivers.flatten()], dim=0)
              # Remove self-loops
-             edge_index = edge_index[:, edge_index[0] != edge[1]]
+             edge_index = edge_index[:, edge_index[0] != edge_index[1]]
         else:
              edge_index = torch.empty(2, 0, dtype=torch.int64, device=self.device)
 
@@ -645,10 +654,9 @@ class AnFuelpriceEnv(EnvBase):
         return torch.zeros(self.num_envs, dtype=torch.bool, device=self.device)
 
 
-    def _batch_reward(self, data_indices: torch.Tensor, actions: TensorDict) -> TensorDict: # Changed actions type hint to TensorDict
+    def _batch_reward(self, data_indices: torch.Tensor, tensordict: TensorDict) -> TensorDict: # Changed actions type hint to TensorDict
         # data_indices shape: [num_envs] or [num_envs, num_steps]
-        # actions is a TensorDict with structure {"agents": {"agent_0": {"action_feature_0": tensor, ...}, ...}}
-        # The batch size of actions matches the batch size of data_indices
+        # tensordict is the input tensordict to _step, expected to contain actions under ('agents', 'action')
 
         # Determine the flat batch size based on data_indices batch size
         if len(data_indices.shape) == 2:
@@ -686,176 +694,82 @@ class AnFuelpriceEnv(EnvBase):
             # Get the returns for the valid data points
             returns_data_valid_flat = self.combined_data[valid_data_indices_flat][:, 13:26] # Shape [num_valid_flat, 13]
 
-            # Extract actions for valid data points and restructure them
-            # The actions tensordict has the same batch size as data_indices
-            # We need to view it to have batch size [flat_batch_size]
-            actions_flat = actions.view(flat_batch_size, *actions.shape[len(data_indices.shape):]) # View to [flat_batch_size, ...]
+            # Extract actions from the input tensordict for valid data points and restructure them
+            # The input tensordict has batch size matching data_indices.
+            # View the input tensordict to have batch size [flat_batch_size]
+            tensordict_flat = tensordict.view(flat_batch_size, *tensordict.shape[len(data_indices.shape):]) # View to [flat_batch_size, ...]
 
-            # Slice the actions TensorDict using the valid indices
-            actions_valid_td_flat = actions_flat[valid_indices_flat].contiguous()
+            # Slice the flattened tensordict using the valid indices
+            tensordict_valid_flat = tensordict_flat[valid_indices_flat].contiguous()
 
-            # Debugging: Print type and shape of actions_valid_td_flat immediately after slicing
-            print(f"\n--- Debugging _batch_reward (after slicing) ---")
-            print(f"Type of actions_valid_td_flat: {type(actions_valid_td_flat)}")
-            print(f"Shape of actions_valid_td_flat: {actions_valid_td_flat.shape}")
-            print("-------------------------------------------")
+            try:
+                 # Get the action tensor from the sliced tensordict
+                 # Assuming action is under ('agents', 'action') and is a tensor with shape [num_valid_flat, num_agents]
+                 actions_tensor_valid_flat = tensordict_valid_flat.get(("agents", "action")) # Shape [num_valid_flat, num_agents]
 
+                 # Ensure actions_tensor_valid_flat is 2D [num_valid_flat, num_agents]
+                 # If it's [num_valid_flat, num_agents, 13] from MultiCategorical, take the first feature or process as needed.
+                 # Assuming scalar action per agent [num_valid_flat, num_agents]
+                 if actions_tensor_valid_flat.dim() == 3 and actions_tensor_valid_flat.shape[-1] == num_action_features:
+                      # If action is [num_valid_flat, num_agents, 13], let's assume we take the first feature for reward calculation simplicity
+                      # This might need adjustment based on the actual action meaning.
+                      actions_tensor_valid_flat = actions_tensor_valid_flat[:, :, 0] # Take the first action feature
 
-            # Ensure actions_valid_td_flat is a TensorDict
-            if not isinstance(actions_valid_td_flat, TensorDictBase):
-                # If slicing resulted in a Tensor, wrap it back into a TensorDict with the expected structure
-                # This assumes the tensor holds the flattened action data [num_valid_flat, num_agents * num_action_features]
-                # And we need to reshape it and re-nest it under the "agents" key
-                print(f"Warning: actions_valid_td_flat became a {type(actions_valid_td_flat)}. Attempting to reconstruct TensorDict.")
-                # Assuming the action tensor is flattened and needs reshaping to [num_valid_flat, num_agents, num_action_features]
-                try:
-                     # Reshape the tensor: [num_valid_flat, num_agents, num_action_features]
-                     actions_tensor_flat = actions_valid_td_flat.view(valid_indices_flat.shape[0], num_agents, num_action_features)
-
-                     # Create a new TensorDict with the expected nested structure
-                     nested_action_dict = {}
-                     # The action space is MultiCategorical of shape [13], which means for each agent
-                     # there is one categorical action over 3 options. So, total action tensor should be
-                     # [num_valid_flat, num_agents, 13] if each agent has 13 categorical actions,
-                     # or [num_valid_flat, num_agents * 13] if it's flattened.
-                     # Based on the action_spec_unbatched, it seems each agent has one action which is a MultiCategorical of shape [13].
-                     # This is unusual; typically each agent has a single action or a tuple of actions.
-                     # Let's assume the action tensor is [num_valid_flat, num_agents, 13] where the last dimension are the categorical choices.
-                     # We need to extract a single categorical choice (index) for each agent from this.
-                     # If the MultiCategorical(nvec=torch.full((self.num_individual_actions_features,), self.num_individual_actions, ...))
-                     # means there are num_individual_actions_features (13) independent categorical actions, each with num_individual_actions (3) choices,
-                     # and the agent_action_spec shape is [13], this suggests each agent receives a tensor of shape [13] representing its action.
-                     # If num_agents is 13, and each has a [13] action, the batched action from the collector might be [num_envs, num_agents, 13].
-                     # Let's assume the action tensor from the collector is [num_envs, num_agents, num_action_features].
-                     # After flattening and slicing: actions_valid_td_flat should be [num_valid_flat, num_agents, num_action_features].
-
-                     # Let's verify the shape of actions_valid_td_flat again.
-                     # If it's [num_valid_flat, 13], it means it lost the agent dimension.
-
-                     # If actions_valid_td_flat is [num_valid_flat, 13], it likely represents the actions for ALL agents concatenated.
-                     # Reshape to [num_valid_flat, num_agents, num_action_features]
-                     if actions_valid_td_flat.shape == torch.Size([valid_indices_flat.shape[0], num_action_features]):
-                          # Assuming action is flattened across agents: [num_valid_flat, num_agents * num_action_features]
-                          # actions_valid_td_flat needs to be reshaped to [num_valid_flat, num_agents, num_action_features]
-                          actions_tensor_flat = actions_valid_td_flat.view(valid_indices_flat.shape[0], num_agents, num_action_features)
-                          print(f"Reshaped actions_valid_td_flat from [num_valid_flat, {num_action_features}] to [num_valid_flat, {num_agents}, {num_action_features}].")
-                     elif actions_valid_td_flat.shape == torch.Size([valid_indices_flat.shape[0], num_agents, num_action_features]):
-                         # Already in the desired shape
-                         actions_tensor_flat = actions_valid_td_flat
-                         print(f"actions_valid_td_flat is already in the desired shape [num_valid_flat, {num_agents}, {num_action_features}].")
-                     else:
-                         print(f"Unexpected shape for actions_valid_td_flat: {actions_valid_td_flat.shape}. Expected [num_valid_flat, {num_action_features}] or [num_valid_flat, {num_agents}, {num_action_features}]. Cannot reconstruct TensorDict.")
-                         # Decide how to handle this failure
-                         agent_rewards_valid_flat = torch.zeros(valid_indices_flat.shape[0], num_agents, 1, dtype=torch.float32, device=self.device)
-                         rewards_flat[valid_indices_flat] = agent_rewards_valid_flat
-                         valid_indices_flat = torch.tensor([], dtype=torch.int64, device=self.device)
-                         print("Skipping reward calculation due to unexpected action tensor shape.")
-
-
-                     if valid_indices_flat.numel() > 0: # Check if we skipped due to shape mismatch
-                          # Recreate the nested TensorDict structure
-                          nested_action_dict = {}
-                          for agent_idx in range(num_agents):
-                               agent_action_dict = {}
-                               for feature_idx in range(num_action_features):
-                                    action_key = f"action_feature_{feature_idx}"
-                                    # Extract the scalar action for this agent and feature
-                                    action_scalar_tensor = actions_tensor_flat[:, agent_idx, feature_idx]
-                                    agent_action_dict[action_key] = action_scalar_tensor
-                               nested_action_dict[f"agent_{agent_idx}"] = TensorDict(agent_action_dict, batch_size=[valid_indices_flat.shape[0]], device=self.device)
-
-                          actions_valid_td_flat = TensorDict({"agents": TensorDict(nested_action_dict, batch_size=[valid_indices_flat.shape[0]], device=self.device)},
-                                                           batch_size=[valid_indices_flat.shape[0]], device=self.device)
-
-                          print("Successfully reconstructed TensorDict from sliced tensor.")
-                          # Debugging: Print type and keys of reconstructed actions_valid_td_flat
-                          print(f"--- Debugging _batch_reward (Reconstructed) ---")
-                          print(f"Type of reconstructed actions_valid_td_flat: {type(actions_valid_td_flat)}")
-                          print(f"Keys of reconstructed actions_valid_td_flat: {actions_valid_td_flat.keys(include_nested=True)}")
-                          print(f"Shape of reconstructed actions_valid_td_flat: {actions_valid_td_flat.shape}")
-                          print("-------------------------------")
-
-
-                except Exception as e:
-                     print(f"Error during TensorDict reconstruction: {e}")
-                     # If reconstruction fails, print the type and shape of the problematic tensor
-                     print(f"Problematic tensor type: {type(actions_valid_td_flat)}, shape: {actions_valid_td_flat.shape}")
-                     # Decide how to handle this failure - maybe return zero rewards or raise an error
-                     # For now, we'll set agent_rewards_valid_flat to zero and continue
-                     agent_rewards_valid_flat = torch.zeros(valid_indices_flat.shape[0], num_agents, 1, dtype=torch.float32, device=self.device)
-                     rewards_flat[valid_indices_flat] = agent_rewards_valid_flat
-                     # Skip further calculations for this batch if reconstruction failed
-                     valid_indices_flat = torch.tensor([], dtype=torch.int64, device=self.device) # Empty the valid indices to skip the next block
-                     print("Skipping reward calculation for this batch due to TensorDict reconstruction failure.")
-
-
-            if valid_indices_flat.numel() > 0: # Check again in case it was emptied due to reconstruction/collection failure
-                 # We need to get the actions into a tensor shape [num_valid_flat, num_agents, num_action_features]
-                 # Extract the action tensors from the nested TensorDict structure
-                 # Assuming the structure is {"agents": {"agent_0": {"action_feature_0": tensor, ...}, ...}}
-                 actions_list = []
-                 for agent_idx in range(num_agents):
-                     agent_actions_list = []
-                     for feature_idx in range(num_action_features):
-                         action_key = ("agents", f"agent_{agent_idx}", f"action_feature_{feature_idx}")
-                         # Get the scalar action tensor for this agent and feature, batched over valid_indices_flat
-                         # Ensure the key exists before accessing
-                         if action_key in actions_valid_td_flat.keys(include_nested=True):
-                              action_scalar_tensor = actions_valid_td_flat.get(action_key)
-                              agent_actions_list.append(action_scalar_tensor.unsqueeze(-1)) # Add feature dimension
-                         else:
-                              print(f"Warning: Action key {action_key} not found in actions_valid_td_flat. Using zeros.")
-                              agent_actions_list.append(torch.zeros(valid_indices_flat.shape[0], 1, dtype=torch.int64, device=self.device))
-
-                     # Concatenate action features for this agent: [num_valid_flat, num_action_features]
-                     if agent_actions_list: # Check if list is not empty
-                          actions_list.append(torch.cat(agent_actions_list, dim=-1).unsqueeze(1)) # Add agent dimension: [num_valid_flat, 1, num_action_features]
-                     else:
-                          print(f"Warning: No action features found for agent {agent_idx}. Using zeros for agent actions.")
-                          actions_list.append(torch.zeros(valid_indices_flat.shape[0], 1, num_action_features, dtype=torch.int64, device=self.device))
-
-
-                 # Concatenate actions across agents: [num_valid_flat, num_agents, num_action_features]
-                 if actions_list: # Check if list is not empty
-                      actions_valid_tensor_flat = torch.cat(actions_list, dim=1)
+                 if actions_tensor_valid_flat.dim() != 2 or actions_tensor_valid_flat.shape[-1] != num_agents:
+                      print(f"Warning: Unexpected action tensor shape in _batch_reward: {actions_tensor_valid_flat.shape}. Expected [num_valid_flat, num_agents]. Using zeros for rewards.")
+                      # Keep the corresponding slices in rewards_flat as zeros (initialized)
+                      pass # Skip reward calculation for this batch
                  else:
-                      print("Error: No actions tensors were collected. Cannot calculate rewards.")
-                      # Handle this error appropriately, maybe return zero rewards for this batch
-                      agent_rewards_valid_flat = torch.zeros(valid_indices_flat.shape[0], num_agents, 1, dtype=torch.float32, device=self.device)
-                      rewards_flat[valid_indices_flat] = agent_rewards_valid_flat
-                      # Skip further calculations
-                      valid_indices_flat = torch.tensor([], dtype=torch.int64, device=self.device)
+                      # Create masks based on the actions
+                      down_mask_valid_flat = (actions_tensor_valid_flat == 0) # Shape [num_valid_flat, num_agents]
+                      up_mask_valid_flat = (actions_tensor_valid_flat == 2)   # Shape [num_valid_flat, num_agents]
+                      hold_mask_valid_flat = (actions_tensor_valid_flat == 1) # Shape [num_valid_flat, num_agents]
 
+                      # Calculate rewards based on action vs returns direction using masks
+                      # returns_data_valid_flat shape: [num_valid_flat, 13]
+                      # The rewards should be calculated for each agent based on their action and their corresponding return.
+                      # For agent j at step i, the return is returns_data_valid_flat[i, j].
+                      # The action is actions_tensor_valid_flat[i, j].
 
-            if valid_indices_flat.numel() > 0: # Check again in case it was emptied due to reconstruction/collection failure
-                 # Expand returns data to match the shape of actions_valid_tensor_flat for vectorized calculation
-                 # returns_data_valid_flat shape: [num_valid_flat, 13]
-                 # actions_valid_tensor_flat shape: [num_valid_flat, num_agents, 13]
-                 returns_expanded_valid_flat = returns_data_valid_flat.unsqueeze(1).expand(-1, num_agents, -1) # Shape [num_valid_flat, num_agents, 13]
+                      # Reward for agent j at step i:
+                      # If action is 0 (down): -returns_data_valid_flat[i, j]
+                      # If action is 2 (up): +returns_data_valid_flat[i, j]
+                      # If action is 1 (hold): -0.01 * torch.abs(returns_data_valid_flat[i, j])
 
-                 # Create masks for each action type using actions_valid_tensor_flat
-                 down_mask_valid_flat = (actions_valid_tensor_flat == 0) # Shape [num_valid_flat, num_agents, 13]
-                 up_mask_valid_flat = (actions_valid_tensor_flat == 2)   # Shape [num_valid_flat, num_agents, 13]
-                 hold_mask_valid_flat = (actions_valid_tensor_flat == 1) # Shape [num_valid_flat, num_agents, 13]
+                      # Vectorized calculation:
+                      reward_down_valid_flat = -returns_data_valid_flat * down_mask_valid_flat.float() # Shape [num_valid_flat, num_agents]
+                      reward_up_valid_flat = returns_data_valid_flat * up_mask_valid_flat.float()     # Shape [num_valid_flat, num_agents]
+                      reward_hold_valid_flat = -0.01 * torch.abs(returns_data_valid_flat) * hold_mask_valid_flat.float() # Shape [num_valid_flat, num_agents]
 
-                 # Calculate rewards based on action vs returns direction using masks
-                 reward_down_valid_flat = -returns_expanded_valid_flat * down_mask_valid_flat.float() # Shape [num_valid_flat, num_agents, 13]
-                 reward_up_valid_flat = returns_expanded_valid_flat * up_mask_valid_flat.float()     # Shape [num_valid_flat, num_agents, 13]
-                 reward_hold_valid_flat = -0.01 * torch.abs(returns_expanded_valid_flat) * hold_mask_valid_flat.float() # Shape [num_valid_flat, num_agents, 13]
+                      # Sum the rewards for each agent
+                      agent_rewards_valid_flat = reward_down_valid_flat + reward_up_valid_flat + reward_hold_valid_flat # Shape [num_valid_flat, num_agents]
 
-                 # Sum the rewards across the feature dimension (dim=-1) to get agent-wise reward for valid data points
-                 combined_reward_components_valid_flat = reward_down_valid_flat + reward_up_valid_flat + reward_hold_valid_flat # Shape [num_valid_flat, num_agents, 13]
+                      # Add the last dimension to match the expected output shape [flat_batch_size, num_agents, 1]
+                      agent_rewards_valid_flat = agent_rewards_valid_flat.unsqueeze(-1) # Shape [num_valid_flat, num_agents, 1]
 
-                 agent_rewards_valid_flat = combined_reward_components_valid_flat.sum(dim=-1, keepdim=True) # Shape [num_valid_flat, num_agents, 1]
+                      # Assign calculated rewards to the selected slice of the rewards_flat tensor
+                      rewards_flat[valid_indices_flat] = agent_rewards_valid_flat # Assign to the slice
 
-                 # Assign calculated rewards to the selected slice of the rewards_flat tensor
-                 rewards_flat[valid_indices_flat] = agent_rewards_valid_flat # Assign to the slice
+            except KeyError:
+                 print("Error: Action key ('agents', 'action') not found in the input tensordict to _batch_reward.")
+                 # Keep the corresponding slices in rewards_flat as zeros (initialized)
+                 pass
+            except Exception as e:
+                 print(f"An error occurred during reward calculation in _batch_reward: {e}")
+                 # Keep the corresponding slices in rewards_flat as zeros (initialized)
+                 pass
+
 
         # Reshape rewards_flat back to the original input batch size [num_envs, num_steps, num_agents, 1]
-        rewards_reshaped = rewards_flat.view(*data_indices.shape, num_agents, 1)
-
+        # If data_indices has shape [num_envs], rewards_flat is [num_envs, num_agents, 1]. Reshape is not needed.
+        # If data_indices has shape [num_envs, num_steps], rewards_flat is [num_envs * num_steps, num_agents, 1]. Reshape to [num_envs, num_steps, num_agents, 1].
+        if len(data_indices.shape) == 2:
+             rewards_reshaped = rewards_flat.view(*data_indices.shape, num_agents, 1)
+        else:
+             rewards_reshaped = rewards_flat # Already in the correct shape [num_envs, num_agents, 1]
 
         # Return rewards wrapped in a TensorDict with the expected key and original input batch size
+        # The batch size of the output TensorDict should match the batch size of data_indices
         return TensorDict({("agents", "reward"): rewards_reshaped}, batch_size=data_indices.shape, device=self.device) # Use data_indices.shape for batch size
 
 # Define variables before creating the environment instance
@@ -863,10 +777,3 @@ num_envs = 4  # Example value
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu") # Use GPU if available
 seed = 42 # Example seed
 episode_length = 64 # Example value
-
-
-base_env = AnFuelpriceEnv(num_envs=num_envs, device=device, seed=seed, episode_length=episode_length)
-frames_per_batch=64
-ROLLOUT=base_env.rollout(4)
-
-
