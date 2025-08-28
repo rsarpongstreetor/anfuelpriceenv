@@ -1,0 +1,2613 @@
+### Data Gathering
+
+# Downloading from websites
+
+!pip install beautifulsoup4
+!pip install furl
+!pip install html-table-parser-python3
+!pip install tensorflow
+
+
+from datetime import datetime, timedelta, date
+import numpy as np
+import pandas as pd
+from sklearn import linear_model
+import matplotlib.pyplot as plt
+from sklearn.linear_model import LinearRegression
+import urllib.request
+from pprint import pprint
+from html_table_parser.parser import HTMLTableParser
+import requests
+import json
+import os
+from google.colab import drive
+from pandas.core.generic import DataFrameFormatter
+from numpy.core.fromnumeric import reshape
+from pandas.core.arrays import period
+from pandas.core.generic import DataFrameFormatter
+from numpy.core.fromnumeric import reshape
+import xml.etree.ElementTree as ET
+from google.colab import data_table
+import tensorflow as tf
+from tensorflow.keras import Model
+from tensorflow.keras.layers import Dense
+
+
+
+todays_date = date.today()
+
+################################################
+###Brent Crude oil Price
+def Brent():
+  #Fetching the bulk data from website  and reorganizing on to google drive
+  import requests
+  import json
+  import os
+  import pandas as pd
+  from google.colab import drive
+  drive.mount('/content/drive')
+  Gh1files=[]
+  json_path = f"{os.getcwd()}\\JSON"
+  url = " https://api.eia.gov/v2/petroleum/pri/spt/data/?frequency=daily&data[0]=value&facets[series][]=RBRTE&start=1995-01-01&sort[0][column]=period&sort[0][direction]=desc&offset=0&length=5000&api_key=7e361b53e231aaf90ac6dcd91c0dc07d"
+  headers = {"api_key":"7e361b53e231aaf90ac6dcd91c0dc07d","host":"api.eia.gov"}
+
+  # Change ticker symbol in the query string in each loop
+  #while loop
+  year = 2002
+  while year < todays_date.year:
+    year += 1
+
+    querystring={'frequency':'daily','data[0]':'value','start':f'{year}-01-01','end':f'{year}-12-31','offset':'0','length':'5000'}
+  # print(f"year = {year}")
+
+
+
+      # Get a new request in every loop
+    response = requests.request("GET", url, headers=headers, params=querystring)
+    #print(f"Done request {year} data")
+
+      # Write the response into a JSON file in the JSON folder
+    with open(f"/content/drive/MyDrive/deep learning codes/EIAAPI_DOWNLOAD/{year}prices1_year.json", "w") as outfile:
+      json.dump(response.json(), outfile)
+
+
+    #concantenating files
+    Gh1files.append(response.json())
+
+    dff = pd.DataFrame(Gh1files)
+
+  else:
+
+      # Output message to indicate the loop is complete
+   # print(f"Wrote all symbols to JSON file")
+
+    print(dff)
+
+  file =open(f"/content/drive/MyDrive/deep learning codes/EIAAPI_DOWNLOAD/solutions/mergedata/Mergeddata1.json", "w")
+  for item in Gh1files:
+      file.write(f"{item}'\n'")
+  file.close()
+
+  #########################################################################################################################################
+
+
+  #Fetching Data and Reorganizing it from google drive
+
+  from pandas.core.generic import DataFrameFormatter
+  from numpy.core.fromnumeric import reshape
+  from pandas.core.arrays import period
+  from datetime import datetime
+  import requests
+  import json
+  import os
+  import pandas as pd
+  import numpy as np
+  from google.colab import drive
+ # drive.mount('/content/drive')
+  DData=[]
+  DD=[]
+  serK=[]
+  serH=[]
+  serr=[]
+  serrr=[]
+  ser=[]
+  Price=[]
+  year = 2002
+  while year < todays_date.year:
+    year += 1
+
+    ppperiod=[]
+    vvvvalue=[]
+    # Open the prices.json file
+    with open(f"/content/drive/MyDrive/deep learning codes/EIAAPI_DOWNLOAD/{year}prices1_year.json") as file:
+      # Load its content and make a new dictionary
+        DData=json.load(file)
+        for response in DData:
+          DDData=(DData["response"])
+
+          for data in DDData:
+            KK=[]
+            hh=[]
+
+            DDDData=(DDData["data"])
+            length = len(DDDData)
+            l=[]
+            i=0
+            while i < length:
+              v=[]
+              p=[]
+              k=DDDData[i]
+              v=k['value']
+
+              pp=(k['period'])
+              p=datetime.strptime(pp,'%Y-%m-%d').date()
+
+              KK.append(p)
+              hh.append(v)
+              i+=1
+        serK.append(KK)
+        serH.append(hh)
+  flat_list1 = []
+  for sublist in serH:
+          for item in sublist:
+            flat_list1.append(item)
+  flat_list = []
+  for sublist in serK:
+          for item in sublist:
+            flat_list.append(item)
+  else:
+    BrentPrice = list(zip(flat_list,np.float16(flat_list1)))
+    BrentPrice=pd.DataFrame(BrentPrice)
+
+
+    BrentPrice.columns=['Date','Brent']
+    BrentPrice['Date']=pd.to_datetime(BrentPrice['Date'],infer_datetime_format=True)
+    BrentPrice.index=BrentPrice['Date']
+    BrentPrice.sort_index
+
+  BBrentPrice=pd.date_range(start=f'{(BrentPrice["Date"]).min()}', end=f'{BrentPrice["Date"].max()}', periods=None, freq="D", tz=None, normalize=False, name=None, inclusive='both')
+  BBrentPrice=pd.DataFrame(BBrentPrice)
+  BBrentPrice.columns=['Date']
+  BBrentPrice.index=BBrentPrice['Date']
+  BBBrentPrice=pd.concat([BBrentPrice['Date'], BrentPrice['Brent']], axis=1, join='outer', ignore_index=False, keys=None, levels=None, names=None, verify_integrity=True, sort=True, copy=None)
+  #BBBrentPrice.ffillna()
+  BBBrentPrice.index=pd.to_datetime(BBBrentPrice.index,format='%Y-%m-%d',infer_datetime_format=True)
+  recentBBBBrentPrice=BBBrentPrice.index[-1]
+  print(BBBrentPrice)
+  return BBBrentPrice
+########################################################################################################
+###  DATA
+def USSDR():
+
+    !pip install beautifulsoup4
+    !pip install furl
+    !pip install html-table-parser-python3
+
+
+    from datetime import datetime, timedelta, date
+    import numpy as np
+    import pandas as pd
+    from sklearn import linear_model
+    import matplotlib.pyplot as plt
+    from sklearn.linear_model import LinearRegression
+    import urllib.request
+    from pprint import pprint
+    from html_table_parser.parser import HTMLTableParser
+
+
+
+
+    def url_get_contents(url):
+
+      # Opens a website and read its
+      # binary contents (HTTP Response Body)
+
+      #making request to the website
+      req = urllib.request.Request(url=url)
+      f = urllib.request.urlopen(req)
+
+      #reading contents of the website
+      return f.read()
+
+    ############
+    from datetime import datetime, timedelta, date
+    today = date.today()
+
+    # initializing dates
+    test_date =today
+
+    # getting difference
+    diff = 1
+    if test_date.weekday() == 0:
+        diff = 3
+    elif test_date.weekday() == 6:
+        diff = 2
+    else :
+        diff = 1
+
+    # subtracting diff
+    res = test_date - timedelta(days=diff)
+    # printing result
+
+    #############
+    z=[f"{res}"]
+    zy=[0]
+    zz=list(zip (z,zy))
+    zz=pd.DataFrame(zz)
+    zz.set_index(zz[0])
+    zz[0]=pd.to_datetime(zz[0])
+    zz[0]=zz[0].astype(int)
+    xxx=zz[0].values.reshape(1, -1)
+
+    b=['2023-6-30','2002-7-20','2001-8-7','2000-12-18','1999-5-19']
+    a=[638237000000000000,631628000000000000,631328000000000000,631128000000000000,630628000000000000]
+    bb=list(zip (b,a))
+    bb=pd.DataFrame(bb)
+    bb[0]=pd.to_datetime(bb[0])
+    bb[0]=bb[0].astype(int)
+
+    x = bb[0].values.reshape(-1,1)
+    y = bb[1].values.reshape(-1,1)
+    bb.set_index(bb[0])
+    reg = LinearRegression()
+    reg.fit(x, y)
+    xxxx=[]
+        # Predict using the model
+    zz[1] = reg.predict(xxx)
+
+    xxxx=zz.iloc[0,1].astype(int)
+ #631770624000000000&To=638381952000000000
+    ##############
+    from furl import furl
+
+    f=furl('https://www.imf.org/external/np/fin/ert/GUI/Pages/Report.aspx?CT=%27USA%27&EX=SDRC&P=DateRange&Fr=631770624000000000&To=638318016000000000&CF=Compressed&CUF=Period&DS=Ascending&DT=Blank')
+    f.args["To"] = {f'{xxxx}'}
+    f.url
+  # print(f.url)
+    # defining the html contents of a URL.
+    xhtml = url_get_contents(f.url).decode('utf-8')
+
+    # Defining the HTMLTableParser object
+    p = HTMLTableParser()
+
+    # feeding the html contents in the
+    # HTMLTableParser object
+    p.feed(xhtml)
+
+    # Now finally obtaining the data of
+    # the table required
+    #pprint(p.tables[15])
+
+    # converting the parsed data to
+    # dataframe
+
+
+    sdrusd=pd.DataFrame(p.tables[15])
+    sdrusd=sdrusd.iloc[2:]
+
+    sdrusd.columns=sdrusd.iloc[1]
+
+    s=sdrusd.iloc[0:,0]
+
+    s=pd.to_datetime(s,infer_datetime_format=True)
+    ps=sdrusd.iloc[0:,1]
+    sdrusd=list(zip(s,ps))
+    sdrusd=pd.DataFrame(sdrusd)
+    sdrusd.columns=['Date','USD_SDR']
+    sdrusd.index=sdrusd['Date']
+
+    ssdrusd=pd.date_range(start=f'{(sdrusd["Date"]).min()}', end=f'{sdrusd["Date"].max()}', periods=None, freq="D", tz=None, normalize=False, name=None, inclusive='both')
+    ssdrusd=pd.DataFrame(ssdrusd)
+    ssdrusd.columns=['Date']
+    ssdrusd.index=ssdrusd['Date']
+    sssdrusd=pd.concat([ssdrusd['Date'], sdrusd['USD_SDR']], axis=1, join='outer', ignore_index=False, keys=None, levels=None, names=None, verify_integrity=True, sort=True, copy=None)
+    sssdrusd.index=pd.to_datetime(sssdrusd.index,format='%Y-%m-%d',infer_datetime_format=True)
+    sssdrusd.sort_index
+   # sssdrusd.fillna(axis=1, method='ffill', inplace=True)
+    print(sssdrusd)
+    return sssdrusd
+
+#####################################################################################################
+###WTI Crude oil *Price*
+
+def WTI():
+  #Fetching the bulk data from website  and reorganizing on to google drive
+  import requests
+  import json
+  import os
+  import pandas as pd
+  from google.colab import drive
+  #drive.mount('/content/drive')
+  Gh1files=[]
+  json_path = f"{os.getcwd()}\\JSON"
+  url = "https://api.eia.gov/v2/petroleum/pri/spt/data/?frequency=daily&data[0]=value&facets[series][]=RWTC&start=1995-01-01&sort[0][column]=period&sort[0][direction]=desc&offset=0&length=5000&api_key=7e361b53e231aaf90ac6dcd91c0dc07d"
+  headers = {"api_key":"7e361b53e231aaf90ac6dcd91c0dc07d","host":"api.eia.gov"}
+
+  # Change ticker symbol in the query string in each loop
+  #while loop
+  year = 2002
+  while year < todays_date.year:
+    year += 1
+
+    querystring={'frequency':'daily','data[0]':'value','start':f'{year}-01-01','end':f'{year}-12-31','offset':'0','length':'5000'}
+  # print(f"year = {year}")
+
+
+
+      # Get a new request in every loop
+    response = requests.request("GET", url, headers=headers, params=querystring)
+   #print(f"Done request {year} data")
+
+      # Write the response into a JSON file in the JSON folder
+    with open(f"/content/drive/MyDrive/deep learning codes/EIAAPI_DOWNLOAD/{year}pricesWTI_year.json", "w") as outfile:
+      json.dump(response.json(),outfile)
+
+
+    #concantenating files
+    Gh1files.append(response.json())
+
+    dff = pd.DataFrame(Gh1files)
+
+
+
+  else:
+      # Output message to indicate the loop is complete
+    print(f"Wrote all symbols to JSON file")
+    #print(dff)
+  file =open(f"/content/drive/MyDrive/deep learning codes/EIAAPI_DOWNLOAD/solutions/mergedata/WTIMergeddata1.json", "w")
+  for item in Gh1files:
+      file.write(f"{item}'\n'")
+  file.close()
+  ####################################################################################################################
+  #Fetching Data and Reorganizing it from google drive
+  from pandas.core.generic import DataFrameFormatter
+  from numpy.core.fromnumeric import reshape
+  from pandas.core.arrays import period
+  from datetime import datetime
+  import json
+  import requests
+  import os
+  import pandas as pd
+  import numpy as np
+  from google.colab import drive
+  #drive.mount('/content/drive')
+  DData=[]
+  DD=[]
+  serK=[]
+  serH=[]
+  serr=[]
+  serrr=[]
+  ser=[]
+  Price=[]
+  year = 2002
+  while year < todays_date.year:
+    year += 1
+
+    ppperiod=[]
+    vvvvalue=[]
+
+    # Open the prices.json file
+    with open(f"/content/drive/MyDrive/deep learning codes/EIAAPI_DOWNLOAD/{year}pricesWTI_year.json") as file:
+
+      # Load its content and make a new dictionary
+        DData=json.load(file)
+        for response in DData:
+          DDData=(DData["response"])
+
+          for data in DDData:
+            KK=[]
+            hh=[]
+
+            DDDData=(DDData["data"])
+            length = len(DDDData)
+            l=[]
+            i=0
+            while i < length:
+              v=[]
+              p=[]
+              k=DDDData[i]
+              v=k['value']
+
+              pp=(k['period'])
+              p=datetime.strptime(pp,'%Y-%m-%d').date()
+
+              KK.append(p)
+              hh.append(v)
+              i+=1
+        serK.append(KK)
+        serH.append(hh)
+  flat_list1 = []
+  for sublist in serH:
+          for item in sublist:
+            flat_list1.append(item)
+  flat_list = []
+  for sublist in serK:
+          for item in sublist:
+            flat_list.append(item)
+  else:
+    WTIPrice = list(zip(flat_list, np.float16(flat_list1)))
+    WTIPrice=pd.DataFrame(WTIPrice)
+    WTIPrice.columns=['Date','WTI']
+    WTIPrice['Date']=pd.to_datetime(WTIPrice['Date'],infer_datetime_format=True)
+    WTIPrice.index=WTIPrice['Date']
+
+    WWTIPrice=pd.date_range(start=f'{(WTIPrice["Date"]).min()}', end=f'{WTIPrice["Date"].max()}', periods=None, freq="D", tz=None, normalize=False, name=None, inclusive='both')
+    WWTIPrice=pd.DataFrame(WWTIPrice)
+    WWTIPrice.columns=['Date']
+    WWTIPrice.index=WWTIPrice['Date']
+    WWWTIPrice=pd.concat([WWTIPrice['Date'], WTIPrice['WTI']], axis=1, join='outer', ignore_index=False, keys=None, levels=None, names=None, verify_integrity=True, sort=True, copy=None)
+
+    WWWTIPrice.index=pd.to_datetime(WWWTIPrice.index, format='%Y-%m-%d', infer_datetime_format=True)
+
+  recentWWWWTIPrice=WWWTIPrice.index[-1]
+  print(WWWTIPrice)
+  return WWWTIPrice
+
+#AWTI.fillna(axis=0, method='ffill', limit=None, inplace=True)
+###########################################################################
+###OPEC Crude oil *Price*
+##OPEC Crude oil *Price*
+def OPEC():
+  import datetime
+  from datetime import datetime
+  import requests
+  import xml.etree.ElementTree as ET
+  from bs4 import BeautifulSoup
+  import numpy as np
+  import pandas as pd
+  import json
+  from google.colab import data_table
+  from google.colab import drive
+  #drive.mount('/content/drive')
+  sheet_name = 'opec' # replace with your own sheet name
+  sheet_id = '1ML1BMS1rOpj7x6yfBiiVmjpmyEik9SNF' # replace with your sheet's ID
+  url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/gviz/tq?tqx=out:csv&sheet={sheet_name}"
+  OPECPrice = pd.read_csv(url)
+
+
+  #OPECPrice.index=OPECPrice.columns[1]
+  #OPECPrice=OPECPrice.drop.
+
+  OPECPrice.columns=['Date','OPEC']
+
+  OPECPrice['Date']=pd.to_datetime(OPECPrice['Date'])
+  OPECPrice=OPECPrice.set_index('Date')
+  return OPECPrice
+#########################################################
+### Fuel Daily Price
+def Fuel_Daily():
+  #Fetching the bulk data from website  and reorganizing on to google drive
+  import requests
+  import json
+  import os
+  import pandas as pd
+  from google.colab import drive
+  #drive.mount('/content/drive')
+
+  Gh1files=[]
+  json_path = f"{os.getcwd()}\\JSON"
+  url = "https://api.eia.gov/v2/petroleum/pri/spt/data/?frequency=daily&data[0]=value&facets[series][]=EER_EPD2DC_PF4_Y05LA_DPG&facets[series][]=EER_EPD2DXL0_PF4_RGC_DPG&facets[series][]=EER_EPD2DXL0_PF4_Y35NY_DPG&facets[series][]=EER_EPD2F_PF4_Y35NY_DPG&facets[series][]=EER_EPJK_PF4_RGC_DPG&facets[series][]=EER_EPLLPA_PF4_Y44MB_DPG&facets[series][]=EER_EPMRR_PF4_Y05LA_DPG&facets[series][]=EER_EPMRU_PF4_RGC_DPG&facets[series][]=EER_EPMRU_PF4_Y35NY_DPG&start=1995-01-01&sort[0][column]=period&sort[0][direction]=desc&offset=0&length=5000&api_key=7e361b53e231aaf90ac6dcd91c0dc07d"
+  headers = {"api_key":"7e361b53e231aaf90ac6dcd91c0dc07d","host":"api.eia.gov"}
+  # Change ticker symbol in the query string in each loop
+  #while loop
+  year = 2002
+  while year <= todays_date.year:
+
+
+    querystring={'frequency':'daily','data[0]':'value','start':f'{year}-01-01','end':f'{year}-12-31','offset':'0','length':'5000'}
+  # print(f"year = {year}")
+
+      # Get a new request in every loop
+    response = requests.request("GET", url, headers=headers, params=querystring)
+  #print(f"Done request {year} data")
+
+      # Write the response into a JSON file in the JSON folder
+    with open(f"/content/drive/MyDrive/deep learning codes/EIAAPI_DOWNLOAD/{year}pricesFuel_year.json", "w") as outfile:
+      json.dump(response.json(),outfile)
+
+    #concantenating files
+    Gh1files.append(response.json())
+
+    dff = pd.DataFrame(Gh1files)
+
+
+    year += 1
+  else:
+
+    file =open(f"/content/drive/MyDrive/deep learning codes/EIAAPI_DOWNLOAD/solutions/mergedata/FuelMergeddata1.json", "w")
+  for item in Gh1files:
+      file.write(f"{item}'\n'")
+  file.close()
+
+
+  ####################################################################################################################################
+  #Fetching Data and Reorganizing it from google drive
+  from pandas.core.generic import DataFrameFormatter
+  from numpy.core.fromnumeric import reshape
+  from pandas.core.arrays import period
+  from datetime import datetime
+  import pandas as pd
+  import json
+  import requests
+  import os
+  import numpy as np
+  from google.colab import drive
+  #drive.mount('/content/drive')
+  DData=[]
+  DD=[]
+  serK=[]
+  serH=[]
+  serT=[]
+  serr=[]
+  serrr=[]
+  ser=[]
+  year = 2002
+  while year < todays_date.year:
+    year += 1
+    ppperiod=[]
+    vvvvalue=[]
+
+    # Open the prices.json file
+    with open(f"/content/drive/MyDrive/deep learning codes/EIAAPI_DOWNLOAD/{year}pricesFuel_year.json") as file:
+
+      # Load its content and make a new dictionary
+        DData=json.load(file)
+        for response in DData:
+          DDData=(DData["response"])
+
+          for data in DDData:
+            KK=[]
+            hh=[]
+            ttt=[]
+
+            DDDData=(DDData["data"])
+            length = len(DDDData)
+            l=[]
+            i=0
+            while i < length:
+              v=[]
+              p=[]
+              k=DDDData[i]
+              v=k['value']
+
+              pp=(k['period'])
+              p=datetime.strptime(pp,'%Y-%m-%d').date()
+
+              tt=(k['series'])
+
+              KK.append(p)
+              hh.append(v)
+              ttt.append(tt)
+
+              i+=1
+        serK.append(KK)
+        serH.append(hh)
+        serT.append(ttt)
+  flat_list=[]
+  for sublist in serH:
+          for item in sublist:
+            flat_list.append(item)
+  flat_list1 = []
+  for sublist in serK:
+          for item in sublist:
+            flat_list1.append(item)
+  flat_list2 = []
+  for sublist in serT:
+          for item in sublist:
+            flat_list2.append(item)
+  else:
+      Price=[]
+      Date=[]
+      EER_EPD2DC_PF4_Y05LA_DPG=[]
+      EER_EPD2DXL0_PF4_RGC_DPG=[]
+      EER_EPD2DXL0_PF4_Y35NY_DPG=[]
+      EER_EPD2F_PF4_Y35NY_DPG=[]
+      EER_EPJK_PF4_RGC_DPG=[]
+      EER_EPLLPA_PF4_Y44MB_DPG=[]
+      EER_EPMRR_PF4_Y05LA_DPG=[]
+      EER_EPMRU_PF4_RGC_DPG=[]
+      EER_EPMRU_PF4_Y35NY_DP=[]
+      xx=len(flat_list1)
+
+      while i<xx-1:
+        i+=1
+        if np.mod(i,9)==0:
+          EER_EPD2DC_PF4_Y05LA_DPG.append(flat_list[i] )
+        elif np.mod(i,9)==1:
+          EER_EPD2DXL0_PF4_RGC_DPG.append(flat_list[i])
+        elif np.mod(i,9)==2:
+          EER_EPD2DXL0_PF4_Y35NY_DPG.append(flat_list[i])
+        elif np.mod(i,9)==3:
+          EER_EPD2F_PF4_Y35NY_DPG.append(flat_list[i])
+        elif np.mod(i,9)==4:
+          EER_EPJK_PF4_RGC_DPG.append(flat_list[i])
+        elif np.mod(i,9)==5:
+          EER_EPLLPA_PF4_Y44MB_DPG.append(flat_list[i])
+        elif np.mod(i,9)==6:
+          EER_EPMRR_PF4_Y05LA_DPG.append(flat_list[i])
+        elif np.mod(i,9)==7:
+          EER_EPMRU_PF4_RGC_DPG.append(flat_list[i])
+        else:
+          EER_EPMRU_PF4_Y35NY_DP.append(flat_list[i])
+          Date.append(flat_list1[i])
+
+        Price1=([Date,EER_EPD2DC_PF4_Y05LA_DPG])
+
+        Fuelprice=list(zip(Date,EER_EPD2DC_PF4_Y05LA_DPG, EER_EPD2DXL0_PF4_RGC_DPG,EER_EPD2DXL0_PF4_Y35NY_DPG, EER_EPD2F_PF4_Y35NY_DPG,
+                          EER_EPJK_PF4_RGC_DPG, EER_EPLLPA_PF4_Y44MB_DPG,EER_EPMRR_PF4_Y05LA_DPG, EER_EPMRU_PF4_RGC_DPG ,EER_EPMRU_PF4_Y35NY_DP))
+
+  Fuelprice=pd.DataFrame(Fuelprice)
+
+  Fuelprice.columns=['Date','EER_EPD2DC_PF4_Y05LA_DPG','EER_EPD2DXL0_PF4_RGC_DPG','EER_EPD2DXL0_PF4_Y35NY_DPG','EER_EPD2F_PF4_Y35NY_DPG','EER_EPJK_PF4_RGC_DPG','EER_EPLLPA_PF4_Y44MB_DPG','EER_EPMRR_PF4_Y05LA_DPG','EER_EPMRU_PF4_RGC_DPG','EER_EPMRU_PF4_Y35NY_DP']
+  Fuelprice['Date']=pd.to_datetime(Fuelprice['Date'],infer_datetime_format=True)
+  Fuelprice.index=Fuelprice['Date']
+  Fuelprice.sort_index()
+  #print(Fuelprice)
+  Fuelprice.fillna( method="ffill", axis="index", inplace=True, limit=None, downcast="infer")
+
+  FFuelprice=pd.date_range(start=f'{(Fuelprice["Date"]).min()}', end=f'{Fuelprice["Date"].max()}', periods=None, freq="D", tz=None, normalize=False, name=None, inclusive='both')
+  FFuelprice=pd.DataFrame(FFuelprice)
+  FFuelprice.columns=['Date']
+  FFuelprice.index=FFuelprice['Date']
+
+  FFFuelprice=pd.concat([FFuelprice['Date'], Fuelprice[['EER_EPD2DC_PF4_Y05LA_DPG','EER_EPD2DXL0_PF4_RGC_DPG','EER_EPD2DXL0_PF4_Y35NY_DPG','EER_EPD2F_PF4_Y35NY_DPG','EER_EPJK_PF4_RGC_DPG','EER_EPLLPA_PF4_Y44MB_DPG','EER_EPMRR_PF4_Y05LA_DPG','EER_EPMRU_PF4_RGC_DPG','EER_EPMRU_PF4_Y35NY_DP']]], axis=1, join='outer', ignore_index=True, keys=None, levels=None, names=None, verify_integrity=True, sort=True, copy=None)
+  FFFuelprice.columns=[['Date','EER_EPD2DC_PF4_Y05LA_DPG','EER_EPD2DXL0_PF4_RGC_DPG','EER_EPD2DXL0_PF4_Y35NY_DPG','EER_EPD2F_PF4_Y35NY_DPG','EER_EPJK_PF4_RGC_DPG','EER_EPLLPA_PF4_Y44MB_DPG','EER_EPMRR_PF4_Y05LA_DPG','EER_EPMRU_PF4_RGC_DPG','EER_EPMRU_PF4_Y35NY_DP']]
+  FFFuelprice.index=pd.to_datetime(FFFuelprice.index,format='%Y-%m-%d',infer_datetime_format=True)
+
+
+  #FFFuelprice.fillna(axis=1, method='ffill', inplace=True)
+  recentFFFuelpricee=FFFuelprice.index[-1]
+
+  print(FFFuelprice)
+  return FFFuelprice
+
+    #ttps://mode.com/blog/python-interactive-plot-libraries/
+    #https://note.nkmk.me/en/python-dict-keys-values-items/
+    #https://ww.freecodecamp.org/news/python-read-json-file-how-to-load-json-from-a-file-and-parse-dumps
+    #https://farama.org/Announcing-The-Farama-Foundation
+
+AAAA=Brent()
+#print(AAAA)
+BBBB=WTI()
+#print(BBBB)
+CCCC=OPEC()
+#print(CCCC)
+DDDD=Fuel_Daily()
+#print(DDDD)
+EEEE=USSDR()
+#print(EEEE)
+
+########################################
+def mergreddata():
+
+  import pandas as pd
+
+  mergreddata1=pd.concat([EEEE['USD_SDR'],CCCC['OPEC'],AAAA['Brent'],BBBB['WTI'],DDDD], axis=1, join='outer', ignore_index=False, levels=None, names=None, verify_integrity=True, sort=True, copy=None)
+  #mergreddata1.index=mergreddata1['Date']
+
+  mergreddata1.to_csv('/content/drive/MyDrive/deep learning codes/EIAAPI_DOWNLOAD/solutions/mergedata/Cleaneddata.csv', index=False)
+
+
+  recentdatadate=mergreddata1.index[-1]
+  #print(recentdatadate2)
+  print(recentdatadate)
+  #print(mergreddata1)
+
+  return mergreddata1
+
+FFFF=mergreddata()
+print(FFFF)
+#########################################
+
+
+df = pd.DataFrame(FFFF[["Brent","WTI","OPEC",]])
+plot = df.plot(title="Crude oil Markets Prices Plot ")
+plt.ylabel('USD/Barrel')
+plt.show
+
+dff =pd.Series(FFFF['USD_SDR'].astype(float))
+plot1 = dff.plot(title=" US Dollar  per  Special Drawing Rights")
+plt.ylabel('USD/SDR')
+plt.show
+
+import pandas as pd
+import matplotlib.pyplot as plt
+import colorsys  # Import colorsys for color conversion
+
+def get_N_HexCol(N=9):
+    HSV_tuples = [(x * 1.0 / N, 0.5, 0.5) for x in range(N)]
+    hex_out = []
+    for rgb in HSV_tuples:
+        rgb = map(lambda x: int(x * 255), colorsys.hsv_to_rgb(*rgb))
+        hex_out.append('#%02x%02x%02x' % tuple(rgb))
+    return hex_out
+
+# Call the function to get the list of colors
+color_sequences = get_N_HexCol()  # Now color_sequences holds the list of hex colors
+
+for i in range(14):
+    # Use .iloc for integer-location based indexing
+    data = FFFF.iloc[:,i:i+1]
+
+    # Check if the column contains datetime objects
+    if pd.api.types.is_datetime64_any_dtype(data.iloc[:, 0]):
+        print(f"Column {data.columns[0]} contains dates, skipping conversion to float.")
+        continue  # Skip to the next iteration
+
+    # Assuming FFFF is a DataFrame
+    dffff = pd.Series(data.iloc[:, 0].astype(float))  # Extract the single column as a Series
+    plot1 = dffff.plot(title=f"{data.columns[0]}", color=color_sequences[i % len(color_sequences)])  # Pass color to the plot function
+    plt.ylabel('USD/Gallon')
+    plt.show()
+
+
+
+import requests
+
+url = " https://api.eia.gov/v2/petroleum/pri/spt/data/?frequency=daily&data[0]=value&facets[series][]=RBRTE&start=1995-01-01&sort[0][column]=period&sort[0][direction]=desc&offset=0&length=5000&api_key=7e361b53e231aaf90ac6dcd91c0dc07d"
+headers = {"api_key":"7e361b53e231aaf90ac6dcd91c0dc07d","host":"api.eia.gov"}
+
+response = requests.request("GET", url, headers=headers)
+print(response.text)
+
+
+
+import os
+from google.colab import drive
+drive.mount("/content/drive")
+# @title Install GNN dependencies
+# Add this in a Google Colab cell to install the correct version of Pytorch Geometric.
+import torch
+!pip install torch_geometric
+# Optional dependencies:
+!pip install pyg_lib torch_scatter torch_sparse torch_cluster torch_spline_conv -f https://data.pyg.org/whl/torch-2.4.0+cpu.html
+!pip install torch-cluster -f https://data.pyg.org/whl/torch-{TORCH}+{CUDA}.html
+!pip install torch-geometric
+!pip install -U torch torchvision # Keep torch and torchvision up to date
+!pip install vmas
+!pip install BenchMARL
+!pip install torchrl
+!pip install  tensorboard
+!pip install wandb
+!pip install TensorDict
+!pip install pyyaml
+!pip install gymnasium
+!pip install ipdb
+
+# Basic imports
+import torch
+import torch.nn as nn
+import torch.optim as optim
+
+# TorchRL imports
+from torchrl.envs import EnvBase, TransformedEnv, StepCounter, check_env_specs
+from torchrl.envs.utils import (
+    ExplorationType,
+    set_exploration_type,
+)
+from torchrl.data import (
+    CompositeSpec,
+    BoundedTensorSpec,
+    UnboundedContinuousTensorSpec,
+    UnboundedDiscreteTensorSpec,
+)
+# Import TensorDict and TensorDictBase from the tensordict library
+from tensordict import TensorDict, TensorDictBase
+from tensordict.nn import TensorDictModule
+from tensordict.nn.probabilistic import ProbabilisticTensorDictModule
+
+from torchrl.collectors import SyncDataCollector
+from torchrl.objectives import ClipPPOLoss
+
+from torchrl.objectives.value.advantages import GAE
+
+# Graph-specific imports (PyTorch Geometric)
+import networkx as nx
+import torch_geometric
+from torch_geometric.nn import GCNConv, global_mean_pool
+# Ensure correct import for Data and Batch
+from torch_geometric.data import Data, Batch
+
+# Other standard libraries
+import numpy as np
+import pandas as pd
+import os
+import random
+import math
+import time
+import wandb
+
+
+import os
+os.environ['CAPTURE_NONTENSOR_STACK'] = 'False'
+print("Set CAPTURE_NONTENSOR_STACK environment variable to False.")
+
+
+# Check if torch_geometric is available
+_torch_geometric_available = False
+try:
+    from torch_geometric.nn import GCNConv, global_mean_pool
+    from torch_geometric.data import Data, Batch
+    _torch_geometric_available = True
+except ImportError:
+    print("torch_geometric not found. Please install it to use GNN-based models.")
+
+
+class FuelpriceenvfeatureGraph():
+
+    def __init__(self): # Modified __init__ to remove nr_of_nodes and nr_of_edges
+        self.graph = nx.DiGraph()
+        # Add graph attributes (these might be overridden by data-driven attributes later)
+        self.graph.graph["graph_attr_1"] = random.random() * 10
+        self.graph.graph["graph_attr_2"] = random.random() * 5.
+        # Removed random node and edge generation from __init__
+
+    def _load_data(self):
+        from scipy.stats import zscore
+        import pandas as pd
+        import numpy as np
+
+
+        data_path = '/content/drive/MyDrive/deep learning codes/EIAAPI_DOWNLOAD/solutions/mergedata/Cleaneddata.csv'
+        if not os.path.exists(data_path):
+            print(f"Data file not found at {data_path}. Please download it.")
+            raise FileNotFoundError(f"Data file not found at {data_path}")
+
+        try:
+            csv_column_names = [
+                'USD_SDR', 'OPEC', 'Brent', 'WTI', "('Date',)",
+                "('EER_EPD2DC_PF4_Y05LA_DPG',)", "('EER_EPD2DXL0_PF4_RGC_DPG',)",
+                "('EER_EPD2DXL0_PF4_Y35NY_DPG',)", "('EER_EPD2F_PF4_Y35NY_DPG',)",
+                "('EER_EPJK_PF4_RGC_DPG',)", "('EER_EPLLPA_PF4_Y44MB_DPG',)",
+                "('EER_EPMRR_PF4_Y05LA_DPG',)", "('EER_EPMRU_PF4_RGC_DPG',)",
+                "('EER_EPMRU_PF4_Y35NY_DP',)"
+            ]
+
+            dffff = pd.read_csv(
+                data_path,
+                header=0,
+                names=csv_column_names,
+                parse_dates=["('Date',)"]
+            )
+
+            dffff = dffff.set_index("('Date',)")
+            dffff = dffff.ffill()
+            dffff.dropna(axis=0, how='any', inplace=True)
+
+            numeric_cols_dffff = dffff.select_dtypes(include=np.number)
+            # Handle columns with zero standard deviation gracefully
+            abs_z_scores_dffff = numeric_cols_dffff.apply(lambda x: np.abs(zscore(x, ddof=0)) if x.std() != 0 else pd.Series(0, index=x.index))
+            threshold = 3
+            outliers_dffff = abs_z_scores_dffff > threshold
+            dffff.loc[:, numeric_cols_dffff.columns][outliers_dffff] = 0
+            print(f"Loading data (allow_repeat_data: {self.allow_repeat_data})...")
+
+            feature_columns = [
+                'USD_SDR', 'OPEC', 'Brent', 'WTI',
+                "('EER_EPD2DC_PF4_Y05LA_DPG',)", "('EER_EPD2DXL0_PF4_RGC_DPG',)",
+                "('EER_EPD2DXL0_PF4_Y35NY_DPG',)", "('EER_EPD2F_PF4_Y35NY_DPG',)",
+                "('EER_EPJK_PF4_RGC_DPG',)", "('EER_EPLLPA_PF4_Y44MB_DPG',)",
+                "('EER_EPMRR_PF4_Y05LA_DPG',)", "('EER_EPMRU_PF4_RGC_DPG',)",
+                "('EER_EPMRU_PF4_Y35NY_DP',)"
+            ]
+
+            features_df = dffff[feature_columns].select_dtypes(include=np.number)
+            numberr_np = features_df.values
+
+            def returns(x):
+              x = np.array(x)
+              return x[1:, :] - x[:-1, :]
+            RRRR = returns(numberr_np)
+
+            def actionspace(x):
+              x = np.array(x)
+              differences = x[1:, :] - x[:-1, :]
+              yxx = np.zeros_like(differences)
+              yxx[differences > 0] = 2
+              yxx[differences < 0] = 0
+              yxx[differences == 0] = 1
+              return yxx
+            action = actionspace(numberr_np)
+
+            Indep = np.hstack((RRRR, action))
+            features_aligned_np = numberr_np[1:, :]
+            self.combined_data = np.hstack([features_aligned_np, Indep])
+
+            # Convert combined_data to torch tensor and move to device
+            self.combined_data = torch.as_tensor(self.combined_data, dtype=torch.float32, device=self.device)
+            #
+
+            # Calculate observation bounds after loading data and moving to device
+            obs_dim = 13
+            self.obs_min = torch.min(self.combined_data[:, :obs_dim], dim=0)[0].unsqueeze(-1).to(self.device)
+            self.obs_max = torch.max(self.combined_data[:, :obs_dim], dim=0)[0].unsqueeze(-1).to(self.device)
+
+            print(f"\nCombined dataset loaded and processed with shape: {self.combined_data.shape} on device {self.device}.")
+            print(f"Observation bounds calculated: Min = {self.obs_min.cpu().numpy()}, Max = {self.obs_max.cpu().numpy()}") # Print on CPU
+
+
+        except Exception as e:
+            print(f"Error loading or preprocessing data: {e}")
+            raise e
+
+        print(f"Data loading complete.")
+
+    def get_graph_observation(self):
+        """
+        Generates a PyTorch Geometric Data object using slices of self.combined_data.
+        Uses self.combined_data[:, 0:12] as node features, the index as edge indices,
+        and a weighted mean of self.combined_data[:, 13:26] and self.combined_data[:, 26:38] as graph attributes.
+
+        Returns:
+            data (Data): The graph data object.
+            num_nodes (int): The number of nodes in the graph.
+            num_edges (int): The number of edges in the graph.
+        """
+        if self.combined_data is None:
+            raise ValueError("Data has not been loaded. Call _load_data() first.")
+
+        # Use self.combined_data[:, 0:12] as node features
+        x = self.combined_data[:, 0:12]
+        num_nodes = x.size(0)
+
+        # Use the index as edge indices (assuming a fully connected graph for now, or define edge logic based on your data)
+        # This is a placeholder and might need adjustment based on how you want to define edges from your time-series data
+        # For demonstration, let's create a simple sequential edge structure
+        edge_index = torch.arange(num_nodes - 1).repeat(2, 1)
+        edge_index[1, :] = edge_index[1, :] + 1
+        num_edges = edge_index.size(1)
+
+
+        # Calculate weighted mean of graph attributes
+        graph_attributes_part1 = torch.mean(self.combined_data[:, 13:26], dim=0)
+        graph_attributes_part2 = torch.mean(self.combined_data[:, 26:39], dim=0)
+        # Assuming equal weights for simplicity (0.5 for each part)
+        graph_attributes = 0.5 * graph_attributes_part1 + 0.5 * graph_attributes_part2
+
+        data = Data(x=x, edge_index=edge_index, graph_attributes=graph_attributes)
+
+        # Note: Edge attributes were not specified in the slicing, so they are not included here.
+        # If you need edge attributes, you'll need to define how to derive them from self.combined_data.
+
+        return data, num_nodes, num_edges
+
+    def get_node_tensor(self, node):
+        """
+        This method is no longer used with the new data loading approach.
+        """
+        raise NotImplementedError("get_node_tensor is not used in this version.")
+
+    def get_edge_tensor(self, edge_data):
+        """
+        This method is no longer used with the new data loading approach.
+        """
+        raise NotImplementedError("get_edge_tensor is not used in this version.")
+
+    def get_graph_tensor(self, graph_data):
+        """
+        This method is no longer used with the new data loading approach.
+        Graph attributes are now directly derived from self.combined_data.
+        """
+        raise NotImplementedError("get_graph_tensor is not used in this version.")
+
+
+
+
+# Initialize the graph environment with some number of nodes and edges
+# nr_of_nodes = 10 # Removed as FuelpriceenvfeatureGraph no longer needs these
+# nr_of_edges = 1 # Removed as FuelpriceenvfeatureGraph no longer needs these
+graph_env = FuelpriceenvfeatureGraph() # Initialized without arguments
+
+# Assuming you have a 'device' defined (e.g., 'cuda' if available, else 'cpu')
+# If not, you can define it here:
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+graph_env.device = device
+graph_env.allow_repeat_data = True # Set this based on your needs
+
+# Load the data
+graph_env._load_data()
+
+# Get the graph observation
+graph_data, num_nodes, num_edges = graph_env.get_graph_observation()
+
+print("\nGraph Data Object:")
+print(graph_data)
+print(f"\nNumber of Nodes: {num_nodes}")
+print(f"Number of Edges: {num_edges}")
+
+import random
+
+import networkx as nx
+import torch
+from tensordict import TensorDict
+from torch_geometric.data import Data, Batch
+from torchrl.collectors import SyncDataCollector
+from torchrl.data import NonTensor
+from torchrl.data import UnboundedContinuous, Bounded, Composite, Categorical
+from torchrl.envs import Compose, StepCounter, TransformedEnv, DoubleToFloat
+from torchrl.envs import EnvBase
+from torchrl.envs.utils import check_env_specs
+import os # Import the os module here
+
+class FuelpriceenvfeatureGraph():
+
+    # Modified __init__ to accept the DataFrame
+    def __init__(self, dataframe: pd.DataFrame):
+        self.graph = nx.DiGraph()
+        # Add graph attributes (these might be overridden by data-driven attributes later)
+        self.graph.graph["graph_attr_1"] = random.random() * 10
+        self.graph.graph["graph_attr_2"] = random.random() * 5.
+        # Store the provided DataFrame
+        self._raw_dataframe = dataframe
+        # Removed random node and edge generation from __init__
+
+    # Modified _load_data to process the provided DataFrame
+    def _load_data(self):
+        from scipy.stats import zscore
+        import pandas as pd
+        import numpy as np
+
+        # Use the provided DataFrame instead of reading from CSV
+        dffff = self._raw_dataframe.copy() # Work on a copy to avoid modifying the original DataFrame
+
+        try:
+            # Assuming the DataFrame already has the correct index and column names
+            # If not, you might need to adjust this part based on the actual FFFF structure
+            # Check if the index is already a DatetimeIndex, if not, try to convert
+            if not isinstance(dffff.index, pd.DatetimeIndex):
+                 print("Warning: DataFrame index is not DatetimeIndex. Attempting to convert.")
+                 try:
+                      dffff.index = pd.to_datetime(dffff.index)
+                 except Exception as e:
+                      print(f"Error converting index to datetime: {e}")
+                      print("Assuming index is already suitable for time-series operations.")
+
+            # Identify columns that should be numeric but are 'object' type
+            # Based on the dtypes output, these include 'USD_SDR' and the columns starting with '(\'EER_EPD'
+            numeric_cols_to_convert = [col for col in dffff.columns if dffff[col].dtype == 'object']
+            # Exclude the date column if it was read as object before conversion to datetime index
+            date_column_name = "('Date',)" # Assuming this was the original date column name
+            if date_column_name in numeric_cols_to_convert:
+                numeric_cols_to_convert.remove(date_column_name)
+
+            if numeric_cols_to_convert:
+                print(f"Converting object type columns to numeric: {numeric_cols_to_convert}")
+                for col in numeric_cols_to_convert:
+                    # Convert to numeric, coercing errors to NaN
+                    dffff[col] = pd.to_numeric(dffff[col], errors='coerce')
+
+            # Assuming the column names are already correct as in csv_column_names
+            # If not, you might need to rename columns here based on the actual FFFF structure
+
+
+            dffff = dffff.ffill()
+            dffff.dropna(axis=0, how='any', inplace=True)
+
+            numeric_cols_dffff = dffff.select_dtypes(include=np.number)
+            # Add check for empty numeric columns before outlier handling
+            if not numeric_cols_dffff.empty:
+                # Handle columns with zero standard deviation gracefully
+                abs_z_scores_dffff = numeric_cols_dffff.apply(lambda x: np.abs(zscore(x, ddof=0)) if x.std() != 0 else pd.Series(0, index=x.index))
+                threshold = 3
+                outliers_dffff = abs_z_scores_dffff > threshold
+                dffff.loc[:, numeric_cols_dffff.columns][outliers_dffff] = 0
+            else:
+                 print("Warning: No numeric columns found for outlier handling.")
+
+
+            print(f"Loading data (allow_repeat_data: {self.allow_repeat_data})...")
+
+            # Define the expected feature columns
+            feature_columns = [
+                'USD_SDR', 'OPEC', 'Brent', 'WTI',
+                "('EER_EPD2DC_PF4_Y05LA_DPG',)", "('EER_EPD2DXL0_PF4_RGC_DPG',)",
+                "('EER_EPD2DXL0_PF4_Y35NY_DPG',)", "('EER_EPD2F_PF4_Y35NY_DPG',)",
+                "('EER_EPJK_PF4_RGC_DPG',)", "('EER_EPLLPA_PF4_Y44MB_DPG',)",
+                "('EER_EPMRR_PF4_Y05LA_DPG',)", "('EER_EPMRU_PF4_RGC_DPG',)",
+                "('EER_EPMRU_PF4_Y35NY_DP',)"
+            ]
+
+            # Select only the feature columns (excluding the date index)
+            # Ensure feature_columns exist in dffff.columns before selecting
+            existing_feature_columns = [col for col in feature_columns if col in dffff.columns]
+            if len(existing_feature_columns) != len(feature_columns):
+                 missing_columns = set(feature_columns) - set(existing_feature_columns)
+                 print(f"Warning: The following feature columns were not found in the DataFrame: {missing_columns}. Proceeding with available columns.")
+                 # Adjust feature_columns to only include existing ones
+                 feature_columns = existing_feature_columns
+
+
+            features_df = dffff[feature_columns].select_dtypes(include=np.number)
+            numberr_np = features_df.values
+
+            # Ensure there's enough data for returns calculation (at least 2 rows)
+            if numberr_np.shape[0] < 2:
+                 print("Warning: Not enough data points for returns calculation. Skipping returns/action processing.")
+                 self.combined_data = torch.as_tensor(numberr_np, dtype=torch.float32, device=self.device)
+                 # Set obs_dim to the number of features
+                 obs_dim = features_df.shape[1]
+                 # Placeholder for obs_min and obs_max if no data
+                 if obs_dim > 0:
+                     self.obs_min = torch.min(self.combined_data[:, :obs_dim], dim=0)[0].to(self.device)
+                     self.obs_max = torch.max(self.combined_data[:, :obs_dim], dim=0)[0].to(self.device)
+                 else:
+                      self.obs_min = torch.empty(0, device=self.device)
+                      self.obs_max = torch.empty(0, device=self.device)
+
+
+            else:
+                def returns(x):
+                  x = np.array(x)
+                  return x[1:, :] - x[:-1, :]
+                RRRR = returns(numberr_np)
+
+                def actionspace(x):
+                  x = np.array(x)
+                  differences = x[1:, :] - x[:-1, :]
+                  yxx = np.zeros_like(differences)
+                  yxx[differences > 0] = 2
+                  yxx[differences < 0] = 0
+                  yxx[differences == 0] = 1
+                  return yxx
+                action = actionspace(numberr_np)
+
+                Indep = np.hstack((RRRR, action))
+                features_aligned_np = numberr_np[1:, :]
+                self.combined_data = np.hstack([features_aligned_np, Indep])
+
+                # Convert combined_data to torch tensor and move to device
+                self.combined_data = torch.as_tensor(self.combined_data, dtype=torch.float32, device=self.device)
+                #
+
+                # Calculate observation bounds after loading data and moving to device
+                obs_dim = features_df.shape[1] # Number of features
+                self.obs_min = torch.min(self.combined_data[:, :obs_dim], dim=0)[0].to(self.device)
+                self.obs_max = torch.max(self.combined_data[:, :obs_dim], dim=0)[0].to(self.device)
+
+
+            print(f"\nCombined dataset loaded and processed with shape: {self.combined_data.shape} on device {self.device}.")
+            print(f"Observation bounds calculated: Min = {self.obs_min.cpu().numpy()}, Max = {self.obs_max.cpu().numpy()}") # Print on CPU
+
+
+        except Exception as e:
+            print(f"Error loading or preprocessing data: {e}")
+            raise e
+
+        print(f"Data loading complete.")
+
+    def get_graph_observation(self):
+        """
+        Generates a PyTorch Geometric Data object using slices of self.combined_data.
+        Uses the first `obs_dim` columns as node features, creates a fully connected edge index,
+        and uses the remaining columns (returns and actions) as graph attributes.
+
+        Returns:
+            data_list (list[Data]): A list of graph data objects, one for each time step.
+            num_nodes_per_single_graph (int): The number of nodes in a single graph.
+            num_edges_per_single_graph (int): The number of edges in a single graph.
+        """
+        if self.combined_data is None:
+            raise ValueError("Data has not been loaded. Call _load_data() first.")
+
+        # Determine observation dimension from calculated bounds
+        obs_dim = self.obs_min.size(0) # Should be the number of features (13)
+        num_nodes_per_graph = obs_dim # Number of nodes per graph is the number of features (13)
+
+
+        # Create a fully connected edge index for a graph with num_nodes_per_graph nodes
+        if num_nodes_per_graph > 1:
+             source_nodes = torch.arange(num_nodes_per_graph).repeat(num_nodes_per_graph)
+             target_nodes = torch.arange(num_nodes_per_graph).repeat_interleave(num_nodes_per_graph)
+             # Remove self-loops if not desired
+             mask = source_nodes != target_nodes
+             edge_index = torch.stack([source_nodes[mask], target_nodes[mask]], dim=0).to(self.device)
+             num_edges_per_single_graph = edge_index.size(1)
+        else:
+             # Handle case with only one node (no edges)
+             edge_index = torch.empty((2, 0), dtype=torch.long, device=self.device)
+             num_edges_per_single_graph = 0
+
+        # Graph attributes are the columns after the features in combined_data
+        # Combined_data has shape (N-1, obs_dim + num_returns + num_actions)
+        # The graph attributes for a single time step are at combined_data[i, obs_dim:]
+        graph_attr_dim = self.combined_data.size(1) - obs_dim # Should be 26 (13 returns + 13 actions)
+
+
+        # Create a list of Data objects, one for each time step (row in combined_data)
+        data_list = []
+        for i in range(self.combined_data.size(0)):
+            # Node features for this time step: self.combined_data[i, :obs_dim].unsqueeze(-1) shape [obs_dim, 1]
+            x_i = self.combined_data[i, :obs_dim].unsqueeze(-1).to(self.device)
+
+            # Graph attributes for this time step: self.combined_data[i, obs_dim:] shape [graph_attr_dim]
+            graph_attributes_i = self.combined_data[i, obs_dim:].to(self.device)
+
+
+            # Use the same edge_index for all graphs (assuming fixed graph structure)
+            data_i = Data(x=x_i, edge_index=edge_index, graph_attributes=graph_attributes_i)
+            data_list.append(data_i)
+
+        # Return the list of Data objects, and the number of nodes/edges per *single* graph
+        return data_list, num_nodes_per_single_graph, num_edges_per_single_graph
+
+
+    def get_node_tensor(self, node):
+        """
+        This method is no longer used with the new data loading approach.
+        """
+        raise NotImplementedError("get_node_tensor is not used in this version.")
+
+    def get_edge_tensor(self, edge_data):
+        """
+        This method is no longer used with the new data loading approach.
+        """
+        raise NotImplementedError("get_edge_tensor is not used in this version.")
+
+    def get_graph_tensor(self, graph_data):
+        """
+        This method is no longer used with the new data loading approach.
+        Graph attributes are now directly derived from self.combined_data.
+        """
+        raise NotImplementedError("get_graph_tensor is not used in this version.")
+
+
+
+
+# Initialize the graph environment with the FFFF DataFrame
+# Assuming FFFF is available in the global scope
+# If not, ensure FFFF is defined before this cell
+if 'FFFF' not in globals():
+    print("DataFrame 'FFFF' not found. Please ensure cell 'jb3anocBtb8O' has been run successfully.")
+    # Exit or handle the error appropriately if FFFF is crucial for further execution
+    # For now, we'll just print the message and let the original NameError occur if not fixed by the user.
+    # raise NameError("DataFrame 'FFFF' not found. Please ensure cell 'jb3anocBtb8O' has been run successfully.") # Keep the original error for clarity if it still happens
+
+
+graph_env = FuelpriceenvfeatureGraph(dataframe=FFFF) # Pass the FFFF DataFrame
+
+# Assuming you have a 'device' defined (e.g., 'cuda' if available, else 'cpu')
+# If not, you can define it here:
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+graph_env.device = device
+graph_env.allow_repeat_data = True # Set this based on your needs
+
+# Load the data
+graph_env._load_data()
+
+# Get the graph observation
+# The get_graph_observation now returns a list of Data objects
+graph_data_list, num_nodes, num_edges = graph_env.get_graph_observation()
+
+print("\nGraph Data Objects (first 5):")
+for i, data in enumerate(graph_data_list[:5]):
+    print(f"  Graph {i}: {data}")
+print(f"\nTotal number of graph data objects (time steps - 1): {len(graph_data_list)}")
+print(f"Number of Nodes per Graph: {num_nodes}")
+print(f"Number of Edges per Graph: {num_edges}")
+
+import torch
+import torch.nn as nn
+import torch.optim as optim
+from torchrl.envs import EnvBase, TransformedEnv, StepCounter, check_env_specs
+from torchrl.data import CompositeSpec
+from tensordict import TensorDict # Ensure TensorDict is imported here if used directly
+
+import networkx as nx
+import random
+import torch_geometric
+from torch_geometric.data import Data, Batch # Ensure Data and Batch are imported
+
+import numpy as np
+import pandas as pd
+from scipy.stats import zscore # Ensure zscore is imported
+
+from typing import Optional # Import Optional
+
+# Assuming load_and_clean_data is defined in a separate cell and returns a pandas DataFrame
+# from .data_utils import load_and_clean_data # Example if in a separate file
+
+class AnFuelpriceEnv(EnvBase):
+    def __init__(self, num_envs, device, seed, **kwargs):
+        self.episode_length = kwargs.get('episode_length', 100)
+        self.num_agents = 13
+        self.allow_repeat_data = kwargs.get('allow_repeat_data', False)
+        self.num_envs = num_envs
+        self.current_data_index = torch.zeros(num_envs, dtype=torch.int64, device=device)
+
+        # Pass the cleaned_dataframe from kwargs to FuelpriceenvfeatureGraph
+        # Removed cleaned_dataframe argument as FuelpriceenvfeatureGraph loads its own data
+        self.graph_generator = FuelpriceenvfeatureGraph(device=self.device)
+
+
+        self.device = device
+
+        self.graph_generator.device = self.device
+        # The allow_repeat_data logic should be handled by the environment when selecting data indices,
+        # not by the graph generator which just generates a graph for a given index.
+        # self.graph_generator.allow_repeat_data = self.allow_repeat_data # Remove this line
+
+        # The FuelpriceenvfeatureGraph constructor with cleaned_dataframe already calls _load_data.
+        # No need to call it again here.
+        # self.graph_generator._load_data() # Remove this line
+        self.combined_data = self.graph_generator.combined_data
+
+        # Check if combined_data was loaded successfully
+        if self.combined_data is None:
+             raise RuntimeError("Failed to load combined data from FuelpriceenvfeatureGraph.")
+
+
+        self.num_agents = 13
+        self.num_individual_actions_features = 13
+
+        self.num_nodes_per_graph = 13
+        self.num_edges_per_graph = 12
+        self.node_feature_dim = 1
+
+        # Ensure tensors are on CPU before converting to NumPy if needed, although
+        # we are keeping them as tensors here.
+        # Calculate observation bounds after loading data and moving to device
+        obs_dim = 13 # The first 13 columns are the features
+        # Calculate on CPU to avoid device issues with min/max
+        combined_data_cpu_obs = self.combined_data[:, :obs_dim].cpu()
+        self.obs_min = torch.min(combined_data_cpu_obs, dim=0)[0].unsqueeze(-1).to(self.device)
+        self.obs_max = torch.max(combined_data_cpu_obs, dim=0)[0].unsqueeze(-1).to(self.device)
+
+
+        super().__init__(device=device, batch_size=[num_envs])
+
+        self._make_specs()
+
+
+    def _make_specs(self):
+        # Import necessary spec classes here to avoid NameError
+        from torchrl.data import CompositeSpec, BoundedTensorSpec, UnboundedContinuousTensorSpec, UnboundedDiscreteTensorSpec, NonTensorSpec
+        from torchrl.envs.specs import CategoricalSpec, MultiCategoricalSpec
+
+        self.state_spec = CompositeSpec(
+             {
+                 "observation": CompositeSpec({
+                     ("agents", "x"): BoundedTensorSpec(
+                         low=self.obs_min.unsqueeze(0).repeat(self.num_envs, self.num_agents, 1, 1),
+                         high=self.obs_max.unsqueeze(0).repeat(self.num_envs, self.num_agents, 1, 1),
+                         shape=torch.Size([self.num_envs,self.num_agents,self.num_nodes_per_graph, self.node_feature_dim]),
+                         dtype=torch.float32,
+                         device=self.device
+                     ),
+                     ("agents", "edge_index"): UnboundedContinuousTensorSpec( # Use UnboundedContinuousTensorSpec for edge_index
+                         shape=torch.Size([self.num_envs,self.num_agents,2,self.num_edges_per_graph]),
+                         dtype=torch.int64,
+                         device=self.device
+                     ),
+                     ("agents", "graph_attributes"): UnboundedContinuousTensorSpec( # Use UnboundedContinuousTensorSpec for graph_attributes
+                         shape=torch.Size([self.num_envs,self.num_agents,(26-13) + (39-26)]),
+                         dtype=torch.float32, # Graph attributes are typically float
+                         device=self.device,
+                     ),
+                 }, batch_size=[self.num_envs], device=self.device),
+                 ("agents", "global_reward_in_state"): UnboundedContinuousTensorSpec( # Use UnboundedContinuousTensorSpec
+                      shape=torch.Size([self.num_envs, self.num_agents,1]),
+                      dtype=torch.float32,
+                      device=self.device
+                 ),
+                 "env_batch": NonTensorSpec( # Use NonTensorSpec for non-tensor data
+                     shape=torch.Size([self.num_envs]),
+                     dtype=torch.int64,
+                     device=self.device
+                 ),
+             },
+             batch_size=self.batch_size,
+             device=self.device,
+         )
+        print(f"State specification defined with batch shape {self.state_spec.shape}.")
+
+        self.num_individual_actions = 3
+        self.num_individual_actions_features = 13
+
+        self.action_spec = CompositeSpec(
+            {
+                ("agents", "action"): MultiCategoricalSpec(
+                    nvec=torch.full((self.num_envs, self.num_agents, self.num_individual_actions_features), self.num_individual_actions, dtype=torch.int64, device=self.device),
+                    shape=torch.Size([self.num_envs, self.num_agents, self.num_individual_actions_features]),
+                    dtype=torch.int64,
+                    device=self.device
+                )
+            },
+            batch_size=[self.num_envs],
+            device=self.device
+        )
+        print("\nMulti-Agent Action specification defined using a single MultiCategorical with batch+agent shape.")
+        print(f"Environment action_spec: {self.action_spec}")
+
+        self.reward_spec = CompositeSpec(
+             {('agents', 'reward'): UnboundedContinuousTensorSpec(shape=torch.Size([self.num_envs, self.num_agents, 1]), dtype=torch.float32, device=self.device)}, # Use UnboundedContinuousTensorSpec
+             batch_size=[self.num_envs],
+             device=self.device,
+        )
+        print(f"Agent-wise Reward specification defined with batch shape {self.reward_spec.shape}.")
+
+        self.done_spec = CompositeSpec(
+            {
+                "done":  CategoricalSpec( # Use CategoricalSpec
+                      n=2,
+                      shape=torch.Size([self.num_envs, 1]),
+                      dtype=torch.bool,
+                      device=self.device),
+
+                "terminated": CategoricalSpec( # Use CategoricalSpec
+                      n=2,
+                      shape=torch.Size([self.num_envs, 1]),
+                      dtype=torch.bool,
+                      device=self.device),
+                "truncated":  CategoricalSpec( # Use CategoricalSpec
+                     n=2,
+                     shape=torch.Size([self.num_envs, 1]),
+                      dtype=torch.bool,
+                      device=self.device),
+            },
+            batch_size=[self.num_envs],
+            device=self.device,
+        )
+        print(f"Done specification defined with batch shape {self.done_spec.shape}.")
+
+        self.state_spec.unlock_(recurse=True)
+        self.action_spec.unlock_(recurse=True)
+        self.reward_spec.unlock_(recurse=True)
+
+
+    def _step(self, tensordict: TensorDictBase) -> TensorDictBase:
+        self.current_data_index += 1
+
+        terminated = self._is_terminal()
+        # Ensure truncated is a boolean tensor with the correct shape [num_envs]
+        truncated = (self.current_data_index >= self.episode_length).squeeze(-1) # Remove the last dimension if it's 1
+
+        actions = tensordict['agents']['action']
+        reward_td = self._batch_reward(self.current_data_index, actions)
+        next_state_tensordict = self._get_state()
+
+        output_tensordict = TensorDict({
+            "observation": next_state_tensordict.get("observation"),
+            ("state", "observation"): next_state_tensordict.get("observation"),
+            # Correct key for global_reward_in_state in the output tensordict
+            ("state", ("agents", "global_reward_in_state")): next_state_tensordict.get(("agents", "global_reward_in_state")),
+            ("agents", "reward",): reward_td.get(("agents", "reward")), # Correct key
+            # Ensure terminated, truncated, and done have shape [num_envs, 1]
+            "terminated": terminated.unsqueeze(-1),
+            "truncated": truncated.unsqueeze(-1),
+            "done": (terminated | truncated).unsqueeze(-1), # Combine terminated and truncated for done
+            "action": actions
+        }, batch_size=self.batch_size, device=self.device)
+
+        # Debug print for the output_tensordict before returning
+        # print(f"Debug in _step before return:")
+        # print(f"  output_tensordict keys: {output_tensordict.keys()}")
+        # Corrected membership check
+        # if ('agents', 'reward') in output_tensordict.keys(True): # Use keys(True) for nested keys
+        #     reward_tensor = output_tensordict.get(('agents', 'reward'))
+        #     print(f"  output_tensordict['agents', 'reward'] is None: {reward_tensor is None}")
+        #     if reward_tensor is not None:
+        #          print(f"  output_tensordict['agents', 'reward'] shape: {reward_tensor.shape}")
+        # else:
+        #     print("  ('agents', 'reward') key not found in output_tensordict")
+
+
+        return output_tensordict
+
+
+    def _reset(self, tensordict: Optional[TensorDictBase] = None) -> TensorDictBase:
+        if self.combined_data is None:
+             raise RuntimeError("Combined data not loaded. Cannot reset environment.")
+
+        if self.allow_repeat_data:
+             # max_start_index should allow for episode_length steps + 1 for the final reward calculation
+             # Data indices go from 0 to combined_data.shape[0] - 1.
+             # If episode_length is L, the steps are from t=0 to t=L-1.
+             # The state at step t uses data at index `current_data_index`.
+             # The reward at step t uses data at index `current_data_index + 1`.
+             # So, for the last step (t=L-1), the state is at index `start_index + L - 1`,
+             # and the reward uses data at index `start_index + L`.
+             # The maximum index needed is `start_index + L`.
+             # This must be less than or equal to `self.combined_data.shape[0] - 1`.
+             # `start_index + L <= self.combined_data.shape[0] - 1`
+             # `start_index <= self.combined_data.shape[0] - 1 - L`
+             # `max_start_index = self.combined_data.shape[0] - 1 - self.episode_length`
+             max_start_index = self.combined_data.shape[0] - 1 - self.episode_length
+             if max_start_index < 0:
+                  self.current_data_index = torch.zeros(self.num_envs, dtype=torch.int64, device=self.device)
+                  print(f"Warning: Data length ({self.combined_data.shape[0]}) is less than episode_length ({self.episode_length}) + 1. Starting episodes from index 0.")
+             else:
+                  self.current_data_index = torch.randint(0, max_start_index + 1, (self.num_envs,), dtype=torch.int64, device=self.device)
+        else:
+             # If not allowing repeat data, start from index 0 for all environments
+             self.current_data_index = torch.zeros(self.num_envs, dtype=torch.int64, device=self.device)
+
+        initial_state_tensordict = self._get_state()
+
+        initial_tensordict = TensorDict({
+            "observation": initial_state_tensordict.get("observation"),
+            ("state", "observation"): initial_state_tensordict.get("observation"),
+             ("state", ("agents", "global_reward_in_state")): initial_state_tensordict.get(("agents", "global_reward_in_state")), # Add global_reward_in_state to initial tensordict
+
+            "terminated": torch.zeros(self.num_envs, 1, dtype=torch.bool, device=self.device),
+            "truncated": torch.zeros(self.num_envs, 1, dtype=torch.bool, device=self.device),
+            "done": torch.zeros(self.num_envs, 1, dtype=torch.bool, device=self.device),
+            # Include env_batch in the reset output if it's part of the state_spec
+            "env_batch": initial_state_tensordict.get("env_batch"),
+        }, batch_size=self.batch_size, device=self.device) # Correct batch_size
+
+
+        return initial_tensordict
+
+
+    def _get_state_at(self, env_ids: torch.Tensor) -> TensorDict:
+         if self.combined_data is None:
+              raise RuntimeError("Combined data not loaded. Ensure _load_data is called.")
+
+         num_envs_subset = len(env_ids)
+         num_agents = self.num_agents
+         num_nodes_per_graph = self.num_nodes_per_graph
+         node_feature_dim = self.node_feature_dim
+         graph_attr_dim = (26-13) + (39-26)
+
+
+         state_data_index = self.current_data_index[env_ids]
+
+         # Check if the data index + 1 is within the bounds for reward calculation in the next step
+         # The state is generated at index `state_data_index`, the reward for this state
+         # will be calculated using data at index `state_data_index + 1`.
+         # So, `state_data_index + 1` must be < `self.combined_data.shape[0]`.
+         # This means `state_data_index` must be < `self.combined_data.shape[0] - 1`.
+         out_of_bounds_mask = (state_data_index < 0) | (state_data_index >= self.combined_data.shape[0] -1)
+
+
+         batched_agent_x_list = []
+         batched_edge_index_list = []
+         batched_graph_attributes_list = []
+         global_reward_in_state = torch.zeros(num_envs_subset, num_agents, 1, device=self.device) # Shape [num_envs_subset, num_agents, 1]
+
+         for i in range(num_envs_subset):
+             env_idx_in_subset = i
+             data_index_for_env = state_data_index[env_idx_in_subset]
+
+             agent_x_list = []
+             env_edge_index_tensor = torch.zeros(num_agents, 2, self.num_edges_per_graph, dtype=torch.int64, device=self.device)
+             env_graph_attributes_tensor = torch.zeros(num_agents, graph_attr_dim, device=self.device)
+
+
+             if out_of_bounds_mask[env_idx_in_subset]:
+                 # If out of bounds, return zero tensors for this environment
+                 for agent_idx in range(num_agents):
+                      agent_x_list.append(torch.zeros(num_nodes_per_graph, node_feature_dim, device=self.device))
+                 # global_reward_in_state for this environment is already 0
+             else:
+                 try:
+                     # Generate graph data for the current state index
+                     graph_data_for_env = self._generate_graph_data_at_index(data_index_for_env.item())
+
+                     # Calculate global reward in state based on returns at the *next* time step (for the reward calculation)
+                     # The global reward *in the state* should ideally reflect information available at the current state,
+                     # not the reward from the next step. However, based on the original code structure,
+                     # it seems the sum of returns *at the current data index* is used.
+                     # Let's stick to the original logic for now, using data at `data_index_for_env`.
+                     # The returns are columns 13 to 26 (exclusive of 26)
+                     returns_for_state = self.combined_data[data_index_for_env.item(), 13:26]
+                     # Ensure returns_for_state is expanded to match the agent dimension for global_reward_in_state
+                     # Sum returns across the 13 features to get a single value per time step
+                     global_reward_value = returns_for_state.sum().unsqueeze(-1) # Shape [1]
+                     # Repeat this value for each agent in the environment
+                     global_reward_in_state[env_idx_in_subset] = global_reward_value.unsqueeze(0).repeat(num_agents, 1) # Correct shape [num_agents, 1]
+
+
+                     for agent_idx in range(num_agents):
+                        agent_x_list.append(graph_data_for_env.x.clone())
+
+                     env_batched_x = torch.stack(agent_x_list, dim=0)
+
+                     env_edge_index_tensor = graph_data_for_env.edge_index.unsqueeze(0).repeat(num_agents, 1, 1)
+                     env_graph_attributes_tensor = graph_data_for_env.graph_attributes.unsqueeze(0).repeat(num_agents, 1)
+
+                 except IndexError:
+                    # This should ideally be caught by the out_of_bounds_mask, but as a fallback:
+                    print(f"Warning: Data index {data_index_for_env.item()} out of bounds during graph generation in _get_state_at. Adding zero tensors.")
+                    for agent_idx in range(num_agents):
+                         agent_x_list.append(torch.zeros(num_nodes_per_graph, node_feature_dim, device=self.device))
+                    env_batched_x = torch.stack(agent_x_list, dim=0)
+                    # global_reward_in_state for this environment is already 0
+
+
+             batched_agent_x_list.append(env_batched_x)
+             batched_edge_index_list.append(env_edge_index_tensor)
+             batched_graph_attributes_list.append(env_graph_attributes_tensor)
+
+
+         batched_agent_x = torch.stack(batched_agent_x_list, dim=0)
+         batched_edge_index = torch.stack(batched_edge_index_list, dim=0)
+         batched_graph_attributes = torch.stack(batched_graph_attributes_list, dim=0)
+
+
+         state_td = TensorDict(
+              {
+                  "observation": CompositeSpec({ # Use CompositeSpec
+                       ("agents", "x"): batched_agent_x,
+                       ("agents", "edge_index"): batched_edge_index,
+                       ("agents", "graph_attributes"): batched_graph_attributes,
+                  }, batch_size=[num_envs_subset], device=self.device),
+                  ("agents", "global_reward_in_state"): global_reward_in_state,
+                  "env_batch": torch.arange(num_envs_subset, device=self.device),
+              },
+              batch_size=[num_envs_subset],
+              device=self.device,
+          )
+
+         return state_td
+
+
+    def _get_state(self) -> TensorDict:
+        if self.combined_data is None:
+             raise RuntimeError("Combined data not loaded. Ensure _load_data is called.")
+
+        num_envs = self.num_envs
+        num_agents = self.num_agents
+        num_nodes_per_graph = self.num_nodes_per_graph
+        node_feature_dim = self.node_feature_dim
+        graph_attr_dim = (26-13) + (39-26)
+
+
+        state_data_index = self.current_data_index
+
+        # Check if the data index + 1 is within the bounds for reward calculation in the next step
+        # The state is generated at index `state_data_index`, the reward for this state
+        # will be calculated using data at index `state_data_index + 1`.
+        # So, `state_data_index + 1` must be < `self.combined_data.shape[0]`.
+        # This means `state_data_index` must be < `self.combined_data.shape[0] - 1`.
+        out_of_bounds_mask = (state_data_index < 0) | (state_data_index >= self.combined_data.shape[0] - 1)
+
+
+        batched_agent_x_list = []
+        batched_edge_index_list = []
+        batched_graph_attributes_list = []
+        global_reward_in_state = torch.zeros(num_envs, num_agents, 1, device=self.device) # Shape [num_envs, num_agents, 1]
+
+
+        for i in range(num_envs):
+            env_idx = i
+            data_index_for_env = state_data_index[env_idx]
+
+            agent_x_list = []
+            env_edge_index_tensor = torch.zeros(num_agents, 2, self.num_edges_per_graph, dtype=torch.int64, device=self.device)
+            env_graph_attributes_tensor = torch.zeros(num_agents, graph_attr_dim, device=self.device)
+
+
+            if out_of_bounds_mask[env_idx]:
+                # If out of bounds, return zero tensors for this environment
+                for agent_idx in range(num_agents):
+                     agent_x_list.append(torch.zeros(num_nodes_per_graph, node_feature_dim, device=self.device))
+                env_batched_x = torch.stack(agent_x_list, dim=0)
+                # global_reward_in_state for this environment is already 0
+            else:
+                try:
+                    # Generate graph data for the current state index
+                    graph_data_for_env = self._generate_graph_data_at_index(data_index_for_env.item())
+
+                    # Calculate global reward in state based on returns at the *next* time step (for the reward calculation)
+                    # Let's stick to the original logic for now, using data at `data_index_for_env`.
+                    returns_for_state = self.combined_data[data_index_for_env.item(), 13:26]
+                    # Ensure returns_for_state is expanded to match the agent dimension for global_reward_in_state
+                    # Sum returns across the 13 features to get a single value per time step
+                    global_reward_value = returns_for_state.sum().unsqueeze(-1) # Shape [1]
+                    # Repeat this value for each agent in the environment
+                    global_reward_in_state[env_idx] = global_reward_value.unsqueeze(0).repeat(num_agents, 1) # Correct shape [num_agents, 1]
+
+
+                    for agent_idx in range(num_agents):
+                        agent_x_list.append(graph_data_for_env.x.clone())
+
+                    env_batched_x = torch.stack(agent_x_list, dim=0)
+
+                    env_edge_index_tensor = graph_data_for_env.edge_index.unsqueeze(0).repeat(num_agents, 1, 1)
+                    env_graph_attributes_tensor = graph_data_for_env.graph_attributes.unsqueeze(0).repeat(num_agents, 1)
+
+
+                except IndexError:
+                    # This should ideally be caught by the out_of_bounds_mask, but as a fallback:
+                    print(f"Warning: Data index {data_index_for_env.item()} out of bounds during graph generation in _get_state. Adding zero tensors.")
+                    for agent_idx in range(num_agents):
+                         agent_x_list.append(torch.zeros(num_nodes_per_graph, node_feature_dim, device=self.device))
+                    env_batched_x = torch.stack(agent_x_list, dim=0)
+                    # global_reward_in_state for this environment is already 0
+
+
+            batched_agent_x_list.append(env_batched_x)
+            batched_edge_index_list.append(env_edge_index_tensor)
+            batched_graph_attributes_list.append(env_graph_attributes_tensor)
+
+
+        batched_agent_x = torch.stack(batched_agent_x_list, dim=0)
+        batched_edge_index = torch.stack(batched_edge_index_list, dim=0)
+        batched_graph_attributes = torch.stack(batched_graph_attributes_list, dim=0)
+
+
+        state_td = TensorDict(
+              {
+                  "observation": CompositeSpec({ # Use CompositeSpec
+                       ("agents", "x"): batched_agent_x,
+                       ("agents", "edge_index"): batched_edge_index,
+                       ("agents", "graph_attributes"): batched_graph_attributes,
+                  }, batch_size=self.batch_size, device=self.device),
+                  ("agents", "global_reward_in_state"): global_reward_in_state,
+                  # Include env_batch in the state output if it's part of the state_spec
+                  "env_batch": torch.arange(num_envs, device=self.device),
+              },
+              batch_size=self.batch_size,
+              device=self.device,
+          )
+
+        return state_td
+
+    def _generate_graph_data_at_index(self, data_index: int):
+        if self.combined_data is None:
+            raise ValueError("Data has not been loaded. Ensure _load_data is called.")
+
+        # Ensure data_index is within bounds for accessing combined_data
+        # We need data at `data_index` for the state features (0:13), returns (13:26), and actions (26:39).
+        # The combined_data has shape (N-1, 39). Indices are 0 to N-2.
+        # So, `data_index` must be within [0, N-2].
+        if data_index < 0 or data_index >= self.combined_data.size(0):
+            raise IndexError(f"Data index {data_index} is out of bounds for combined_data with size {self.combined_data.size(0)}")
+
+
+        # Node features are the first 13 columns at the given data_index
+        # Shape [13] -> unsqueeze(-1) -> [13, 1]
+        x = self.combined_data[data_index, 0:13].unsqueeze(-1).to(self.device)
+        num_nodes = x.size(0) # Should be 13
+
+        # Edge index (assuming sequential edges for now)
+        # Shape [2, num_nodes - 1] -> [2, 12]
+        if num_nodes > 1:
+             edge_index = torch.arange(num_nodes - 1, device=self.device).repeat(2, 1)
+             edge_index[1, :] = edge_index[1, :] + 1
+             num_edges = edge_index.size(1) # Should be 12
+        else:
+             # Handle case with only one node (no edges)
+             edge_index = torch.empty((2, 0), dtype=torch.long, device=self.device)
+             num_edges = 0
+
+
+        # Graph attributes are derived from returns (13:26) and actions (26:39) at the given data_index
+        # Returns part: self.combined_data[data_index, 13:26] shape [13]
+        # Actions part: self.combined_data[data_index, 26:39] shape [13]
+        # Combined graph attributes dimension is (26-13) + (39-26) = 13 + 13 = 26.
+
+        graph_attributes_part1 = self.combined_data[data_index, 13:26]
+        graph_attributes_part2 = self.combined_data[data_index, 26:39]
+
+        # Ensure parts have the expected size before calculating mean
+        expected_part_size = 13
+        if graph_attributes_part1.numel() != expected_part_size or graph_attributes_part2.numel() != expected_part_size:
+             print(f"Warning: graph_attributes parts have unexpected sizes: part1 {graph_attributes_part1.numel()}, part2 {graph_attributes_part2.numel()}. Expected {expected_part_size}.")
+             # Handle this case, perhaps return zeros or raise error
+             graph_attributes = torch.zeros((26-13) + (39-26), dtype=torch.float32, device=self.device) # Return zeros if sizes are wrong
+        else:
+             # Calculate weighted mean of graph attributes parts
+             # Ensure float type for mean calculation
+             graph_attributes = (0.5 * torch.mean(graph_attributes_part1.float()) + 0.5 * torch.mean(graph_attributes_part2.float())).to(self.device)
+             # The mean pooling here results in a single scalar value per part, not a vector of size 13.
+             # If the intention is to have a graph attribute vector of size 26, we should concatenate or process differently.
+             # Let's assume the intention is to concatenate the two parts directly as the graph attribute vector.
+             graph_attributes = torch.cat([graph_attributes_part1.float(), graph_attributes_part2.float()], dim=-1).to(self.device) # Shape [26]
+
+        # Ensure graph_attributes has the expected size (26)
+        expected_graph_attr_size = (26-13) + (39-26)
+        if graph_attributes.numel() != expected_graph_attr_size:
+             print(f"Warning: Final graph_attributes has unexpected size {graph_attributes.numel()}. Expected {expected_graph_attr_size}.")
+             graph_attributes = torch.zeros(expected_graph_attr_size, dtype=torch.float32, device=self.device) # Replace with placeholder if wrong size
+
+
+        data = Data(x=x, edge_index=edge_index, graph_attributes=graph_attributes)
+
+        # Note: Edge attributes were not specified in the slicing, so they are not included here.
+
+        return data
+
+
+    def _set_seed(self, seed: Optional[int] = None) -> int:
+        if seed is None:
+             seed = torch.randint(0, 1000000, (1,)).item()
+        torch.manual_seed(seed)
+        np.random.seed(seed)
+        return seed
+
+    def _is_terminal(self) -> torch.Tensor:
+        # The environment terminates when the data runs out or episode length is reached.
+        # The episode length check is handled in _step for 'truncated'.
+        # We need to check if the next data index for reward calculation would be out of bounds.
+        # The reward for the current state (at index `current_data_index`) is calculated using data at `current_data_index + 1`.
+        # So, if `current_data_index + 1` is >= `self.combined_data.shape[0]`, the environment should terminate.
+        # This means if `current_data_index` is >= `self.combined_data.shape[0] - 1`.
+
+        if self.combined_data is None:
+             # If data is not loaded, environment cannot terminate based on data
+             return torch.zeros(self.num_envs, dtype=torch.bool, device=self.device)
+
+        # Check if the current data index is the last possible index for a state
+        # The last possible index for a state is self.combined_data.shape[0] - 2,
+        # because the reward calculation needs data at index + 1.
+        # So, if current_data_index is self.combined_data.shape[0] - 2, the *next* state
+        # will use index self.combined_data.shape[0] - 1, and the reward for that state
+        # would need index self.combined_data.shape[0], which is out of bounds.
+        # Therefore, the environment should terminate when current_data_index reaches self.combined_data.shape[0] - 1.
+        # However, the episode length also causes truncation. Let's make this environment
+        # only terminate when the data runs out, and use truncation for episode length.
+        # Termination occurs when the next data index needed for reward is out of bounds.
+        # The reward for state at index `t` uses data at index `t+1`.
+        # If the current state is at index `current_data_index`, the next state will be at `current_data_index + 1`.
+        # The reward for the state at `current_data_index + 1` will need data at `current_data_index + 2`.
+        # So, termination should happen when `current_data_index + 1 + 1` is out of bounds, i.e.,
+        # `current_data_index + 2 >= self.combined_data.shape[0]`.
+        # This means `current_data_index >= self.combined_data.shape[0] - 2`.
+
+        # Let's simplify: termination happens if we cannot get the *next* state and its reward.
+        # The next state is at index `current_data_index + 1`.
+        # The reward for the state at `current_data_index` uses data at `current_data_index + 1`.
+        # So, if `current_data_index + 1` is out of bounds, we cannot calculate the reward, and the episode should terminate.
+        # `current_data_index + 1 >= self.combined_data.shape[0]`
+        # `current_data_index >= self.combined_data.shape[0] - 1`
+
+        # Check if the current data index is the last valid index for a state before the data runs out.
+        # The last valid index for a state is self.combined_data.shape[0] - 2.
+        # If current_data_index reaches self.combined_data.shape[0] - 1, the next step will try to access index self.combined_data.shape[0] for reward, which is OOB.
+        # So, termination happens when current_data_index reaches self.combined_data.shape[0] - 1.
+        # This aligns with the check `data_indices >= self.combined_data.shape[0]` in _batch_reward.
+
+        terminated = (self.current_data_index >= self.combined_data.shape[0] - 1) # Shape [num_envs]
+        return terminated
+
+
+    def _batch_reward(self, data_indices: torch.Tensor, actions: torch.Tensor) -> TensorDict:
+        # data_indices shape: [num_envs] - This is the index for the *current state*
+        # actions shape: [num_envs, num_agents, num_action_features]
+
+        num_envs = data_indices.shape[0]
+        num_agents = self.num_agents
+        num_action_features = self.num_individual_actions_features # Should be 13
+
+        # The reward for the state at index `t` (data_indices) is calculated using the data at index `t+1`.
+        # We need the data from the *next* time step to calculate the return.
+        next_data_indices = data_indices + 1
+
+        # Ensure the next data indices are within bounds for accessing combined_data
+        # The combined_data has shape (N-1, 39). Indices are 0 to N-2.
+        # So, `next_data_indices` must be < `self.combined_data.shape[0]`.
+        valid_mask = (next_data_indices >= 0) & (next_data_indices < self.combined_data.shape[0]) # Shape [num_envs]
+
+        # Initialize rewards tensor with shape [num_envs, num_agents, 1]
+        rewards = torch.zeros(num_envs, num_agents, 1, dtype=torch.float32, device=self.device)
+
+        # Calculate rewards only for valid environments
+        valid_indices = torch.where(valid_mask)[0]
+
+        if valid_indices.numel() > 0:
+            # Select the relevant slices from actions and get returns from the next data index
+            actions_valid = actions[valid_indices] # Shape [num_valid_envs, num_agents, num_action_features]
+            valid_next_data_indices = next_data_indices[valid_indices] # Shape [num_valid_envs]
+
+            # Get the returns for the valid environments from the *next* data index
+            # Returns are columns 13 to 26 (exclusive of 26) at the next time step.
+            returns_data_valid = self.combined_data[valid_next_data_indices][:, 13:26] # Shape [num_valid_envs, 13]
+
+            # Expand returns data to match the shape of actions for vectorized calculation
+            # returns_data_valid shape: [num_valid_envs, 13]
+            # actions_valid shape: [num_valid_envs, num_agents, 13]
+            # We need returns_expanded_valid shape: [num_valid_envs, num_agents, 13]
+            returns_expanded_valid = returns_data_valid.unsqueeze(1).expand(-1, num_agents, -1) # Corrected expansion
+
+            # Create masks for each action type using actions for valid environments
+            down_mask_valid = (actions_valid == 0) # Shape [num_valid_envs, num_agents, 13]
+            up_mask_valid = (actions_valid == 2)   # Shape [num_valid_envs, num_agents, 13]
+            hold_mask_valid = (actions_valid == 1) # Shape [num_valid_envs, num_agents, 13]
+
+            # Calculate rewards based on action vs returns direction using masks
+            # Reward is positive if action is UP (2) and return is positive, or action is DOWN (0) and return is negative.
+            # Reward is negative if action is UP (2) and return is negative, or action is DOWN (0) and return is positive.
+            # Reward for HOLD (1) is a small penalty based on absolute return.
+
+            # Calculate reward for UP action (action == 2)
+            reward_up_valid = returns_expanded_valid * up_mask_valid.float() # Positive if return > 0, Negative if return < 0
+
+            # Calculate reward for DOWN action (action == 0)
+            # If return is negative, -return is positive. If action is DOWN, we want positive reward.
+            # So, reward is -returns_expanded_valid if action is DOWN.
+            reward_down_valid = -returns_expanded_valid * down_mask_valid.float() # Positive if return < 0, Negative if return > 0
+
+            # Calculate reward for HOLD action (action == 1)
+            # Small penalty based on absolute return.
+            reward_hold_valid = -0.01 * torch.abs(returns_expanded_valid) * hold_mask_valid.float() # Always negative or zero
+
+            # Sum the rewards across the feature dimension (dim=-1) to get agent-wise reward for valid environments
+            combined_reward_components = reward_down_valid + reward_up_valid + reward_hold_valid # Shape [num_valid_envs, num_agents, 13]
+
+            # Sum across the 13 action features to get a single reward per agent per environment
+            agent_rewards_valid = combined_reward_components.sum(dim=-1, keepdim=True) # Shape [num_valid_envs, num_agents, 1]
+
+            # Assign calculated rewards to the selected slice of the rewards tensor
+            rewards[valid_indices] = agent_rewards_valid
+
+        # Return rewards wrapped in a TensorDict with the expected key and batch size
+        # The rewards tensor already has the correct shape [num_envs, num_agents, 1] with invalid environment rewards set to 0.
+        return TensorDict({("agents", "reward"): rewards}, batch_size=[num_envs], device=self.device)
+
+import torch
+import torch.nn as nn
+import torch.optim as optim
+from torchrl.envs import EnvBase, TransformedEnv, StepCounter, check_env_specs
+from torchrl.data import CompositeSpec
+from tensordict import TensorDict # Ensure TensorDict is imported here if used directly
+
+import networkx as nx
+import random
+import torch_geometric
+from torch_geometric.data import Data, Batch # Ensure Data and Batch are imported
+
+import numpy as np
+import pandas as pd
+from scipy.stats import zscore # Ensure zscore is imported
+
+from typing import Optional # Import Optional
+
+# Assuming load_and_clean_data is defined in a separate cell and returns a pandas DataFrame
+# from .data_utils import load_and_clean_data # Example if in a separate file
+
+class AnFuelpriceEnv(EnvBase):
+    def __init__(self, num_envs, device, seed, **kwargs):
+        self.episode_length = kwargs.get('episode_length', 100)
+        self.num_agents = 13
+        self.allow_repeat_data = kwargs.get('allow_repeat_data', False)
+        self.num_envs = num_envs
+        self.current_data_index = torch.zeros(num_envs, dtype=torch.int64, device=device)
+
+        # Pass the cleaned_dataframe from kwargs to FuelpriceenvfeatureGraph
+        # Removed cleaned_dataframe argument as FuelpriceenvfeatureGraph loads its own data
+        self.graph_generator = FuelpriceenvfeatureGraph(dataframe=kwargs.get('cleaned_dataframe'))
+
+
+        self.device = device
+
+        self.graph_generator.device = self.device
+        # The allow_repeat_data logic should be handled by the environment when selecting data indices,
+        # not by the graph generator which just generates a graph for a given index.
+        # self.graph_generator.allow_repeat_data = self.allow_repeat_data # Remove this line
+
+        # The FuelpriceenvfeatureGraph constructor with cleaned_dataframe already calls _load_data.
+        # No need to call it again here.
+        # self.graph_generator._load_data() # Remove this line
+        self.combined_data = self.graph_generator.combined_data
+
+        # Check if combined_data was loaded successfully
+        if self.combined_data is None:
+             raise RuntimeError("Failed to load combined data from FuelpriceenvfeatureGraph.")
+
+
+        self.num_agents = 13
+        self.num_individual_actions_features = 13
+
+        self.num_nodes_per_graph = 13
+        self.num_edges_per_graph = 12
+        self.node_feature_dim = 1
+
+        # Ensure tensors are on CPU before converting to NumPy if needed, although
+        # we are keeping them as tensors here.
+        # Calculate observation bounds after loading data and moving to device
+        obs_dim = 13 # The first 13 columns are the features
+        # Calculate on CPU to avoid device issues with min/max
+        combined_data_cpu_obs = self.combined_data[:, :obs_dim].cpu()
+        self.obs_min = torch.min(combined_data_cpu_obs, dim=0)[0].unsqueeze(-1).to(self.device)
+        self.obs_max = torch.max(combined_data_cpu_obs, dim=0)[0].unsqueeze(-1).to(self.device)
+
+
+        super().__init__(device=device, batch_size=[num_envs])
+
+        self._make_specs()
+
+
+    def _make_specs(self):
+        # Import necessary spec classes here to avoid NameError
+        from torchrl.data import CompositeSpec, BoundedTensorSpec, UnboundedContinuousTensorSpec, UnboundedDiscreteTensorSpec, NonTensorSpec
+        from torchrl.envs.specs import CategoricalSpec, MultiCategoricalSpec
+
+        self.state_spec = CompositeSpec(
+             {
+                 "observation": CompositeSpec({
+                     ("agents", "x"): BoundedTensorSpec(
+                         low=self.obs_min.unsqueeze(0).repeat(self.num_envs, self.num_agents, 1, 1),
+                         high=self.obs_max.unsqueeze(0).repeat(self.num_envs, self.num_agents, 1, 1),
+                         shape=torch.Size([self.num_envs,self.num_agents,self.num_nodes_per_graph, self.node_feature_dim]),
+                         dtype=torch.float32,
+                         device=self.device
+                     ),
+                     ("agents", "edge_index"): UnboundedContinuousTensorSpec( # Use UnboundedContinuousTensorSpec for edge_index
+                         shape=torch.Size([self.num_envs,self.num_agents,2,self.num_edges_per_graph]),
+                         dtype=torch.int64,
+                         device=self.device
+                     ),
+                     ("agents", "graph_attributes"): UnboundedContinuousTensorSpec( # Use UnboundedContinuousTensorSpec for graph_attributes
+                         shape=torch.Size([self.num_envs,self.num_agents,(26-13) + (39-26)]),
+                         dtype=torch.float32, # Graph attributes are typically float
+                         device=self.device,
+                     ),
+                 }, batch_size=[self.num_envs], device=self.device),
+                 ("agents", "global_reward_in_state"): UnboundedContinuousTensorSpec( # Use UnboundedContinuousTensorSpec
+                      shape=torch.Size([self.num_envs, self.num_agents,1]),
+                      dtype=torch.float32,
+                      device=self.device
+                 ),
+                 "env_batch": NonTensorSpec( # Use NonTensorSpec for non-tensor data
+                     shape=torch.Size([self.num_envs]),
+                     dtype=torch.int64,
+                     device=self.device
+                 ),
+             },
+             batch_size=self.batch_size,
+             device=self.device,
+         )
+        print(f"State specification defined with batch shape {self.state_spec.shape}.")
+
+        self.num_individual_actions = 3
+        self.num_individual_actions_features = 13
+
+        self.action_spec = CompositeSpec(
+            {
+                ("agents", "action"): MultiCategoricalSpec(
+                    nvec=torch.full((self.num_envs, self.num_agents, self.num_individual_actions_features), self.num_individual_actions, dtype=torch.int64, device=self.device),
+                    shape=torch.Size([self.num_envs, self.num_agents, self.num_individual_actions_features]),
+                    dtype=torch.int64,
+                    device=self.device
+                )
+            },
+            batch_size=[self.num_envs],
+            device=self.device
+        )
+        print("\nMulti-Agent Action specification defined using a single MultiCategorical with batch+agent shape.")
+        print(f"Environment action_spec: {self.action_spec}")
+
+        self.reward_spec = CompositeSpec(
+             {('agents', 'reward'): UnboundedContinuousTensorSpec(shape=torch.Size([self.num_envs, self.num_agents, 1]), dtype=torch.float32, device=self.device)}, # Use UnboundedContinuousTensorSpec
+             batch_size=[self.num_envs],
+             device=self.device,
+        )
+        print(f"Agent-wise Reward specification defined with batch shape {self.reward_spec.shape}.")
+
+        self.done_spec = CompositeSpec(
+            {
+                "done":  CategoricalSpec( # Use CategoricalSpec
+                      n=2,
+                      shape=torch.Size([self.num_envs, 1]),
+                      dtype=torch.bool,
+                      device=self.device),
+
+                "terminated": CategoricalSpec( # Use CategoricalSpec
+                      n=2,
+                      shape=torch.Size([self.num_envs, 1]),
+                      dtype=torch.bool,
+                      device=self.device),
+                "truncated":  CategoricalSpec( # Use CategoricalSpec
+                     n=2,
+                     shape=torch.Size([self.num_envs, 1]),
+                      dtype=torch.bool,
+                      device=self.device),
+            },
+            batch_size=[self.num_envs],
+            device=self.device,
+        )
+        print(f"Done specification defined with batch shape {self.done_spec.shape}.")
+
+        self.state_spec.unlock_(recurse=True)
+        self.action_spec.unlock_(recurse=True)
+        self.reward_spec.unlock_(recurse=True)
+
+
+    def _step(self, tensordict: TensorDictBase) -> TensorDictBase:
+        self.current_data_index += 1
+
+        terminated = self._is_terminal()
+        # Ensure truncated is a boolean tensor with the correct shape [num_envs]
+        truncated = (self.current_data_index >= self.episode_length).squeeze(-1) # Remove the last dimension if it's 1
+
+        actions = tensordict['agents']['action']
+        reward_td = self._batch_reward(self.current_data_index, actions)
+        next_state_tensordict = self._get_state()
+
+        output_tensordict = TensorDict({
+            "observation": next_state_tensordict.get("observation"),
+            ("state", "observation"): next_state_tensordict.get("observation"),
+            # Correct key for global_reward_in_state in the output tensordict
+            ("state", ("agents", "global_reward_in_state")): next_state_tensordict.get(("agents", "global_reward_in_state")),
+            ("agents", "reward",): reward_td.get(("agents", "reward")), # Correct key
+            # Ensure terminated, truncated, and done have shape [num_envs, 1]
+            "terminated": terminated.unsqueeze(-1),
+            "truncated": truncated.unsqueeze(-1),
+            "done": (terminated | truncated).unsqueeze(-1), # Combine terminated and truncated for done
+            "action": actions
+        }, batch_size=self.batch_size, device=self.device)
+
+        # Debug print for the output_tensordict before returning
+        # print(f"Debug in _step before return:")
+        # print(f"  output_tensordict keys: {output_tensordict.keys()}")
+        # Corrected membership check
+        # if ('agents', 'reward') in output_tensordict.keys(True): # Use keys(True) for nested keys
+        #     reward_tensor = output_tensordict.get(('agents', 'reward'))
+        #     print(f"  output_tensordict['agents', 'reward'] is None: {reward_tensor is None}")
+        #     if reward_tensor is not None:
+        #          print(f"  output_tensordict['agents', 'reward'] shape: {reward_tensor.shape}")
+        # else:
+        #     print("  ('agents', 'reward') key not found in output_tensordict")
+
+
+        return output_tensordict
+
+
+    def _reset(self, tensordict: Optional[TensorDictBase] = None) -> TensorDictBase:
+        if self.combined_data is None:
+             raise RuntimeError("Combined data not loaded. Cannot reset environment.")
+
+        if self.allow_repeat_data:
+             # max_start_index should allow for episode_length steps + 1 for the final reward calculation
+             # Data indices go from 0 to combined_data.shape[0] - 1.
+             # If episode_length is L, the steps are from t=0 to t=L-1.
+             # The state at step t uses data at index `current_data_index`.
+             # The reward at step t uses data at index `current_data_index + 1`.
+             # So, for the last step (t=L-1), the state is at index `start_index + L - 1`,
+             # and the reward uses data at index `start_index + L`.
+             # The maximum index needed is `start_index + L`.
+             # This must be less than or equal to `self.combined_data.shape[0] - 1`.
+             # `start_index + L <= self.combined_data.shape[0] - 1`
+             # `start_index <= self.combined_data.shape[0] - 1 - L`
+             # `max_start_index = self.combined_data.shape[0] - 1 - self.episode_length`
+             max_start_index = self.combined_data.shape[0] - 1 - self.episode_length
+             if max_start_index < 0:
+                  self.current_data_index = torch.zeros(self.num_envs, dtype=torch.int64, device=self.device)
+                  print(f"Warning: Data length ({self.combined_data.shape[0]}) is less than episode_length ({self.episode_length}) + 1. Starting episodes from index 0.")
+             else:
+                  self.current_data_index = torch.randint(0, max_start_index + 1, (self.num_envs,), dtype=torch.int64, device=self.device)
+        else:
+             # If not allowing repeat data, start from index 0 for all environments
+             self.current_data_index = torch.zeros(self.num_envs, dtype=torch.int64, device=self.device)
+
+        initial_state_tensordict = self._get_state()
+
+        initial_tensordict = TensorDict({
+            "observation": initial_state_tensordict.get("observation"),
+            ("state", "observation"): initial_state_tensordict.get("observation"),
+             ("state", ("agents", "global_reward_in_state")): initial_state_tensordict.get(("agents", "global_reward_in_state")), # Add global_reward_in_state to initial tensordict
+
+            "terminated": torch.zeros(self.num_envs, 1, dtype=torch.bool, device=self.device),
+            "truncated": torch.zeros(self.num_envs, 1, dtype=torch.bool, device=self.device),
+            "done": torch.zeros(self.num_envs, 1, dtype=torch.bool, device=self.device),
+            # Include env_batch in the reset output if it's part of the state_spec
+            "env_batch": initial_state_tensordict.get("env_batch"),
+        }, batch_size=self.batch_size, device=self.device) # Correct batch_size
+
+
+        return initial_tensordict
+
+
+    def _get_state_at(self, env_ids: torch.Tensor) -> TensorDict:
+         if self.combined_data is None:
+              raise RuntimeError("Combined data not loaded. Ensure _load_data is called.")
+
+         num_envs_subset = len(env_ids)
+         num_agents = self.num_agents
+         num_nodes_per_graph = self.num_nodes_per_graph
+         node_feature_dim = self.node_feature_dim
+         graph_attr_dim = (26-13) + (39-26)
+
+
+         state_data_index = self.current_data_index[env_ids]
+
+         # Check if the data index + 1 is within the bounds for reward calculation in the next step
+         # The state is generated at index `state_data_index`, the reward for this state
+         # will be calculated using data at index `state_data_index + 1`.
+         # So, `state_data_index + 1` must be < `self.combined_data.shape[0]`.
+         # This means `state_data_index` must be < `self.combined_data.shape[0] - 1`.
+         out_of_bounds_mask = (state_data_index < 0) | (state_data_index >= self.combined_data.shape[0] -1)
+
+
+         batched_agent_x_list = []
+         batched_edge_index_list = []
+         batched_graph_attributes_list = []
+         global_reward_in_state = torch.zeros(num_envs_subset, num_agents, 1, device=self.device) # Shape [num_envs_subset, num_agents, 1]
+
+         for i in range(num_envs_subset):
+             env_idx_in_subset = i
+             data_index_for_env = state_data_index[env_idx_in_subset]
+
+             agent_x_list = []
+             env_edge_index_tensor = torch.zeros(num_agents, 2, self.num_edges_per_graph, dtype=torch.int64, device=self.device)
+             env_graph_attributes_tensor = torch.zeros(num_agents, graph_attr_dim, device=self.device)
+
+
+             if out_of_bounds_mask[env_idx_in_subset]:
+                 # If out of bounds, return zero tensors for this environment
+                 for agent_idx in range(num_agents):
+                      agent_x_list.append(torch.zeros(num_nodes_per_graph, node_feature_dim, device=self.device))
+                 # global_reward_in_state for this environment is already 0
+             else:
+                 try:
+                     # Generate graph data for the current state index
+                     graph_data_for_env = self._generate_graph_data_at_index(data_index_for_env.item())
+
+                     # Calculate global reward in state based on returns at the *next* time step (for the reward calculation)
+                     # The global reward *in the state* should ideally reflect information available at the current state,
+                     # not the reward from the next step. However, based on the original code structure,
+                     # it seems the sum of returns *at the current data index* is used.
+                     # Let's stick to the original logic for now, using data at `data_index_for_env`.
+                     # The returns are columns 13 to 26 (exclusive of 26)
+                     returns_for_state = self.combined_data[data_index_for_env.item(), 13:26]
+                     # Ensure returns_for_state is expanded to match the agent dimension for global_reward_in_state
+                     # Sum returns across the 13 features to get a single value per time step
+                     global_reward_value = returns_for_state.sum().unsqueeze(-1) # Shape [1]
+                     # Repeat this value for each agent in the environment
+                     global_reward_in_state[env_idx_in_subset] = global_reward_value.unsqueeze(0).repeat(num_agents, 1) # Correct shape [num_agents, 1]
+
+
+                     for agent_idx in range(num_agents):
+                        agent_x_list.append(graph_data_for_env.x.clone())
+
+                     env_batched_x = torch.stack(agent_x_list, dim=0)
+
+                     env_edge_index_tensor = graph_data_for_env.edge_index.unsqueeze(0).repeat(num_agents, 1, 1)
+                     env_graph_attributes_tensor = graph_data_for_env.graph_attributes.unsqueeze(0).repeat(num_agents, 1)
+
+                 except IndexError:
+                    # This should ideally be caught by the out_of_bounds_mask, but as a fallback:
+                    print(f"Warning: Data index {data_index_for_env.item()} out of bounds during graph generation in _get_state_at. Adding zero tensors.")
+                    for agent_idx in range(num_agents):
+                         agent_x_list.append(torch.zeros(num_nodes_per_graph, node_feature_dim, device=self.device))
+                    env_batched_x = torch.stack(agent_x_list, dim=0)
+                    # global_reward_in_state for this environment is already 0
+
+
+             batched_agent_x_list.append(env_batched_x)
+             batched_edge_index_list.append(env_edge_index_tensor)
+             batched_graph_attributes_list.append(env_graph_attributes_tensor)
+
+
+         batched_agent_x = torch.stack(batched_agent_x_list, dim=0)
+         batched_edge_index = torch.stack(batched_edge_index_list, dim=0)
+         batched_graph_attributes = torch.stack(batched_graph_attributes_list, dim=0)
+
+
+         state_td = TensorDict(
+              {
+                  "observation": CompositeSpec({ # Use CompositeSpec
+                       ("agents", "x"): batched_agent_x,
+                       ("agents", "edge_index"): batched_edge_index,
+                       ("agents", "graph_attributes"): batched_graph_attributes,
+                  }, batch_size=[num_envs_subset], device=self.device),
+                  ("agents", "global_reward_in_state"): global_reward_in_state,
+                  "env_batch": torch.arange(num_envs_subset, device=self.device),
+              },
+              batch_size=[num_envs_subset],
+              device=self.device,
+          )
+
+         return state_td
+
+
+    def _get_state(self) -> TensorDict:
+        if self.combined_data is None:
+             raise RuntimeError("Combined data not loaded. Ensure _load_data is called.")
+
+        num_envs = self.num_envs
+        num_agents = self.num_agents
+        num_nodes_per_graph = self.num_nodes_per_graph
+        node_feature_dim = self.node_feature_dim
+        graph_attr_dim = (26-13) + (39-26)
+
+
+        state_data_index = self.current_data_index
+
+        # Check if the data index + 1 is within the bounds for reward calculation in the next step
+        # The state is generated at index `state_data_index`, the reward for this state
+        # will be calculated using data at index `state_data_index + 1`.
+        # So, `state_data_index + 1` must be < `self.combined_data.shape[0]`.
+        # This means `state_data_index` must be < `self.combined_data.shape[0] - 1`.
+        out_of_bounds_mask = (state_data_index < 0) | (state_data_index >= self.combined_data.shape[0] - 1)
+
+
+        batched_agent_x_list = []
+        batched_edge_index_list = []
+        batched_graph_attributes_list = []
+        global_reward_in_state = torch.zeros(num_envs, num_agents, 1, device=self.device) # Shape [num_envs, num_agents, 1]
+
+
+        for i in range(num_envs):
+            env_idx = i
+            data_index_for_env = state_data_index[env_idx]
+
+            agent_x_list = []
+            env_edge_index_tensor = torch.zeros(num_agents, 2, self.num_edges_per_graph, dtype=torch.int64, device=self.device)
+            env_graph_attributes_tensor = torch.zeros(num_agents, graph_attr_dim, device=self.device)
+
+
+            if out_of_bounds_mask[env_idx]:
+                # If out of bounds, return zero tensors for this environment
+                for agent_idx in range(num_agents):
+                     agent_x_list.append(torch.zeros(num_nodes_per_graph, node_feature_dim, device=self.device))
+                env_batched_x = torch.stack(agent_x_list, dim=0)
+                # global_reward_in_state for this environment is already 0
+            else:
+                try:
+                    # Generate graph data for the current state index
+                    graph_data_for_env = self._generate_graph_data_at_index(data_index_for_env.item())
+
+                    # Calculate global reward in state based on returns at the *next* time step (for the reward calculation)
+                    # Let's stick to the original logic for now, using data at `data_index_for_env`.
+                    returns_for_state = self.combined_data[data_index_for_env.item(), 13:26]
+                    # Ensure returns_for_state is expanded to match the agent dimension for global_reward_in_state
+                    # Sum returns across the 13 features to get a single value per time step
+                    global_reward_value = returns_for_state.sum().unsqueeze(-1) # Shape [1]
+                    # Repeat this value for each agent in the environment
+                    global_reward_in_state[env_idx] = global_reward_value.unsqueeze(0).repeat(num_agents, 1) # Correct shape [num_agents, 1]
+
+
+                    for agent_idx in range(num_agents):
+                        agent_x_list.append(graph_data_for_env.x.clone())
+
+                    env_batched_x = torch.stack(agent_x_list, dim=0)
+
+                    env_edge_index_tensor = graph_data_for_env.edge_index.unsqueeze(0).repeat(num_agents, 1, 1)
+                    env_graph_attributes_tensor = graph_data_for_env.graph_attributes.unsqueeze(0).repeat(num_agents, 1)
+
+
+                except IndexError:
+                    # This should ideally be caught by the out_of_bounds_mask, but as a fallback:
+                    print(f"Warning: Data index {data_index_for_env.item()} out of bounds during graph generation in _get_state. Adding zero tensors.")
+                    for agent_idx in range(num_agents):
+                         agent_x_list.append(torch.zeros(num_nodes_per_graph, node_feature_dim, device=self.device))
+                    env_batched_x = torch.stack(agent_x_list, dim=0)
+                    # global_reward_in_state for this environment is already 0
+
+
+            batched_agent_x_list.append(env_batched_x)
+            batched_edge_index_list.append(env_edge_index_tensor)
+            batched_graph_attributes_list.append(env_graph_attributes_tensor)
+
+
+        batched_agent_x = torch.stack(batched_agent_x_list, dim=0)
+        batched_edge_index = torch.stack(batched_edge_index_list, dim=0)
+        batched_graph_attributes = torch.stack(batched_graph_attributes_list, dim=0)
+
+
+        state_td = TensorDict(
+              {
+                  "observation": CompositeSpec({ # Use CompositeSpec
+                       ("agents", "x"): batched_agent_x,
+                       ("agents", "edge_index"): batched_edge_index,
+                       ("agents", "graph_attributes"): batched_graph_attributes,
+                  }, batch_size=self.batch_size, device=self.device),
+                  ("agents", "global_reward_in_state"): global_reward_in_state,
+                  # Include env_batch in the state output if it's part of the state_spec
+                  "env_batch": torch.arange(num_envs, device=self.device),
+              },
+              batch_size=self.batch_size,
+              device=self.device,
+          )
+
+        return state_td
+
+    def _generate_graph_data_at_index(self, data_index: int):
+        if self.combined_data is None:
+            raise ValueError("Data has not been loaded. Ensure _load_data is called.")
+
+        # Ensure data_index is within bounds for accessing combined_data
+        # We need data at `data_index` for the state features (0:13), returns (13:26), and actions (26:39).
+        # The combined_data has shape (N-1, 39). Indices are 0 to N-2.
+        # So, `data_index` must be within [0, N-2].
+        if data_index < 0 or data_index >= self.combined_data.size(0):
+            raise IndexError(f"Data index {data_index} is out of bounds for combined_data with size {self.combined_data.size(0)}")
+
+
+        # Node features are the first 13 columns at the given data_index
+        # Shape [13] -> unsqueeze(-1) -> [13, 1]
+        x = self.combined_data[data_index, 0:13].unsqueeze(-1).to(self.device)
+        num_nodes = x.size(0) # Should be 13
+
+        # Edge index (assuming sequential edges for now)
+        # Shape [2, num_nodes - 1] -> [2, 12]
+        if num_nodes > 1:
+             edge_index = torch.arange(num_nodes - 1, device=self.device).repeat(2, 1)
+             edge_index[1, :] = edge_index[1, :] + 1
+             num_edges = edge_index.size(1) # Should be 12
+        else:
+             # Handle case with only one node (no edges)
+             edge_index = torch.empty((2, 0), dtype=torch.long, device=self.device)
+             num_edges = 0
+
+
+        # Graph attributes are derived from returns (13:26) and actions (26:39) at the given data_index
+        # Returns part: self.combined_data[data_index, 13:26] shape [13]
+        # Actions part: self.combined_data[data_index, 26:39] shape [13]
+        # Combined graph attributes dimension is (26-13) + (39-26) = 13 + 13 = 26.
+
+        graph_attributes_part1 = self.combined_data[data_index, 13:26]
+        graph_attributes_part2 = self.combined_data[data_index, 26:39]
+
+        # Ensure parts have the expected size before calculating mean
+        expected_part_size = 13
+        if graph_attributes_part1.numel() != expected_part_size or graph_attributes_part2.numel() != expected_part_size:
+             print(f"Warning: graph_attributes parts have unexpected sizes: part1 {graph_attributes_part1.numel()}, part2 {graph_attributes_part2.numel()}. Expected {expected_part_size}.")
+             # Handle this case, perhaps return zeros or raise error
+             graph_attributes = torch.zeros((26-13) + (39-26), dtype=torch.float32, device=self.device) # Return zeros if sizes are wrong
+        else:
+             # Calculate weighted mean of graph attributes parts
+             # Ensure float type for mean calculation
+             graph_attributes = (0.5 * torch.mean(graph_attributes_part1.float()) + 0.5 * torch.mean(graph_attributes_part2.float())).to(self.device)
+             # The mean pooling here results in a single scalar value per part, not a vector of size 13.
+             # If the intention is to have a graph attribute vector of size 26, we should concatenate or process differently.
+             # Let's assume the intention is to concatenate the two parts directly as the graph attribute vector.
+             graph_attributes = torch.cat([graph_attributes_part1.float(), graph_attributes_part2.float()], dim=-1).to(self.device) # Shape [26]
+
+        # Ensure graph_attributes has the expected size (26)
+        expected_graph_attr_size = (26-13) + (39-26)
+        if graph_attributes.numel() != expected_graph_attr_size:
+             print(f"Warning: Final graph_attributes has unexpected size {graph_attributes.numel()}. Expected {expected_graph_attr_size}.")
+             graph_attributes = torch.zeros(expected_graph_attr_size, dtype=torch.float32, device=self.device) # Replace with placeholder if wrong size
+
+
+        data = Data(x=x, edge_index=edge_index, graph_attributes=graph_attributes)
+
+        # Note: Edge attributes were not specified in the slicing, so they are not included here.
+
+        return data
+
+
+    def _set_seed(self, seed: Optional[int] = None) -> int:
+        if seed is None:
+             seed = torch.randint(0, 1000000, (1,)).item()
+        torch.manual_seed(seed)
+        np.random.seed(seed)
+        return seed
+
+    def _is_terminal(self) -> torch.Tensor:
+        # The environment terminates when the data runs out or episode length is reached.
+        # The episode length check is handled in _step for 'truncated'.
+        # We need to check if the next data index for reward calculation would be out of bounds.
+        # The reward for the current state (at index `current_data_index`) is calculated using data at `current_data_index + 1`.
+        # So, if `current_data_index + 1` is >= `self.combined_data.shape[0]`, the environment should terminate.
+        # This means if `current_data_index` is >= `self.combined_data.shape[0] - 1`.
+
+        if self.combined_data is None:
+             # If data is not loaded, environment cannot terminate based on data
+             return torch.zeros(self.num_envs, dtype=torch.bool, device=self.device)
+
+        # Check if the current data index is the last possible index for a state
+        # The last possible index for a state is self.combined_data.shape[0] - 2,
+        # because the reward calculation needs data at index + 1.
+        # So, if current_data_index is self.combined_data.shape[0] - 2, the *next* state
+        # will use index self.combined_data.shape[0] - 1, and the reward for that state
+        # would need index self.combined_data.shape[0], which is out of bounds.
+        # Therefore, the environment should terminate when current_data_index reaches self.combined_data.shape[0] - 1.
+        # However, the episode length also causes truncation. Let's make this environment
+        # only terminate when the data runs out, and use truncation for episode length.
+        # Termination occurs when the next data index needed for reward is out of bounds.
+        # The reward for state at index `t` uses data at index `t+1`.
+        # If the current state is at index `current_data_index`, the next state will be at `current_data_index + 1`.
+        # The reward for the state at `current_data_index + 1` will need data at `current_data_index + 2`.
+        # So, termination should happen when `current_data_index + 1 + 1` is out of bounds, i.e.,
+        # `current_data_index + 2 >= self.combined_data.shape[0]`.
+        # This means `current_data_index >= self.combined_data.shape[0] - 2`.
+
+        # Let's simplify: termination happens if we cannot get the *next* state and its reward.
+        # The next state is at index `current_data_index + 1`.
+        # The reward for the state at `current_data_index` uses data at `current_data_index + 1`.
+        # So, if `current_data_index + 1` is out of bounds, we cannot calculate the reward, and the episode should terminate.
+        # `current_data_index + 1 >= self.combined_data.shape[0]`
+        # `current_data_index >= self.combined_data.shape[0] - 1`
+
+        # Check if the current data index is the last valid index for a state before the data runs out.
+        # The last valid index for a state is self.combined_data.shape[0] - 2.
+        # If current_data_index reaches self.combined_data.shape[0] - 1, the next step will try to access index self.combined_data.shape[0] for reward, which is OOB.
+        # So, termination happens when current_data_index reaches self.combined_data.shape[0] - 1.
+        # This aligns with the check `data_indices >= self.combined_data.shape[0]` in _batch_reward.
+
+        terminated = (self.current_data_index >= self.combined_data.shape[0] - 1) # Shape [num_envs]
+        return terminated
+
+
+    def _batch_reward(self, data_indices: torch.Tensor, actions: torch.Tensor) -> TensorDict:
+        # data_indices shape: [num_envs] - This is the index for the *current state*
+        # actions shape: [num_envs, num_agents, num_action_features]
+
+        num_envs = data_indices.shape[0]
+        num_agents = self.num_agents
+        num_action_features = self.num_individual_actions_features # Should be 13
+
+        # The reward for the state at index `t` (data_indices) is calculated using the data at index `t+1`.
+        # We need the data from the *next* time step to calculate the return.
+        next_data_indices = data_indices + 1
+
+        # Ensure the next data indices are within bounds for accessing combined_data
+        # The combined_data has shape (N-1, 39). Indices are 0 to N-2.
+        # So, `next_data_indices` must be < `self.combined_data.shape[0]`.
+        valid_mask = (next_data_indices >= 0) & (next_data_indices < self.combined_data.shape[0]) # Shape [num_envs]
+
+        # Initialize rewards tensor with shape [num_envs, num_agents, 1]
+        rewards = torch.zeros(num_envs, num_agents, 1, dtype=torch.float32, device=self.device)
+
+        # Calculate rewards only for valid environments
+        valid_indices = torch.where(valid_mask)[0]
+
+        if valid_indices.numel() > 0:
+            # Select the relevant slices from actions and get returns from the next data index
+            actions_valid = actions[valid_indices] # Shape [num_valid_envs, num_agents, num_action_features]
+            valid_next_data_indices = next_data_indices[valid_indices] # Shape [num_valid_envs]
+
+            # Get the returns for the valid environments from the *next* data index
+            # Returns are columns 13 to 26 (exclusive of 26) at the next time step.
+            returns_data_valid = self.combined_data[valid_next_data_indices][:, 13:26] # Shape [num_valid_envs, 13]
+
+            # Expand returns data to match the shape of actions for vectorized calculation
+            # returns_data_valid shape: [num_valid_envs, 13]
+            # actions_valid shape: [num_valid_envs, num_agents, 13]
+            # We need returns_expanded_valid shape: [num_valid_envs, num_agents, 13]
+            returns_expanded_valid = returns_data_valid.unsqueeze(1).expand(-1, num_agents, -1) # Corrected expansion
+
+            # Create masks for each action type using actions for valid environments
+            down_mask_valid = (actions_valid == 0) # Shape [num_valid_envs, num_agents, 13]
+            up_mask_valid = (actions_valid == 2)   # Shape [num_valid_envs, num_agents, 13]
+            hold_mask_valid = (actions_valid == 1) # Shape [num_valid_envs, num_agents, 13]
+
+            # Calculate rewards based on action vs returns direction using masks
+            # Reward is positive if action is UP (2) and return is positive, or action is DOWN (0) and return is negative.
+            # Reward is negative if action is UP (2) and return is negative, or action is DOWN (0) and return is positive.
+            # Reward for HOLD (1) is a small penalty based on absolute return.
+
+            # Calculate reward for UP action (action == 2)
+            reward_up_valid = returns_expanded_valid * up_mask_valid.float() # Positive if return > 0, Negative if return < 0
+
+            # Calculate reward for DOWN action (action == 0)
+            # If return is negative, -return is positive. If action is DOWN, we want positive reward.
+            # So, reward is -returns_expanded_valid if action is DOWN.
+            reward_down_valid = -returns_expanded_valid * down_mask_valid.float() # Positive if return < 0, Negative if return > 0
+
+            # Calculate reward for HOLD action (action == 1)
+            # Small penalty based on absolute return.
+            reward_hold_valid = -0.01 * torch.abs(returns_expanded_valid) * hold_mask_valid.float() # Always negative or zero
+
+            # Sum the rewards across the feature dimension (dim=-1) to get agent-wise reward for valid environments
+            combined_reward_components = reward_down_valid + reward_up_valid + reward_hold_valid # Shape [num_valid_envs, num_agents, 13]
+
+            # Sum across the 13 action features to get a single reward per agent per environment
+            agent_rewards_valid = combined_reward_components.sum(dim=-1, keepdim=True) # Shape [num_valid_envs, num_agents, 1]
+
+            # Assign calculated rewards to the selected slice of the rewards tensor
+            rewards[valid_indices] = agent_rewards_valid
+
+        # Return rewards wrapped in a TensorDict with the expected key and batch size
+        # The rewards tensor already has the correct shape [num_envs, num_agents, 1] with invalid environment rewards set to 0.
+        return TensorDict({("agents", "reward"): rewards}, batch_size=[num_envs], device=self.device)
+
+!pip install gdown -q
+
+import gdown
+import os
+
+output_path = '/content/drive/MyDrive/deep learning codes/EIAAPI_DOWNLOAD/solutions/mergedata/Cleaneddata.csv'
+# Create parent directories if they don't exist
+os.makedirs(os.path.dirname(output_path), exist_ok=True)
+
+# Download the file
+gdown.download('https://drive.google.com/file/d/1S2v0oHr8ZLcv56I_si2Z2AJB5osz1glw/view?usp=drive_link', output_path, quiet=False)
+
+print(f"Downloaded file to {output_path}")
+
+import pandas as pd
+
+# Check the type of FFFF
+print(type(FFFF))
+
+# Display the head of FFFF
+display(FFFF.head())
+
+# Display the data types of columns in FFFF
+display(FFFF.dtypes)
