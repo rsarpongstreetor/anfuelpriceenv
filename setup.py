@@ -6,12 +6,13 @@ setup(
     packages=find_packages(),
     install_requires=[
         'torch',
+        'torch_geometric',
+        'pyg_lib torch_scatter torch_sparse torch_cluster torch_spline_conv',
         'torchrl',
         'tensordict',
         'pandas',
         'numpy',
         'pyyaml',
-        'torch_geometric',
         'ipdb',
         'gymnasium',
         'pyyaml',
@@ -19,13 +20,9 @@ setup(
         'tensorboard',
         
         
-        
-        
-        
-        'pyg_lib torch_scatter torch_sparse torch_cluster torch_spline_conv',
-        
         # ... add any other dependencies here
     ],
     # ... other setup options if needed
 )
+
 
