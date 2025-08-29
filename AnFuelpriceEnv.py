@@ -29,7 +29,9 @@ class FuelpriceenvfeatureGraph():
         import os # Import os
 
 
-        data_path = '/content/drive/MyDrive/deep learning codes/EIAAPI_DOWNLOAD/solutions/solutions/mergedata/Cleaneddata.csv'
+        data_path = 'https://raw.githubusercontent.com/rsarpongstreetor/anfuelpriceenv/main/Cleaneddata%20(5).csv'
+        # Removed the file existence check as we are reading from a URL directly
+
         if not os.path.exists(data_path):
             print(f"Data file not found at {data_path}. Please download it.")
             raise FileNotFoundError(f"Data file not found at {data_path}")
@@ -891,5 +893,6 @@ num_envs = 4  # Example value
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu") # Use GPU if available
 seed = 42 # Example seed
 episode_length = 64 # Example value
+
 
 
