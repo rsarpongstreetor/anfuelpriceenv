@@ -1,3 +1,18 @@
+import pandas as pd
+import os
+
+# Find the part of the code that loads the data.
+# It might look something like this:
+# data_path = "some_url_or_path_here"
+# data = pd.read_csv(data_path)
+
+# Replace the data loading logic with this:
+
+
+
+
+
+
 # Recreate the base environment instance and the PyGBatchProcessor for training
 import networkx as nx
 import random
@@ -29,12 +44,17 @@ class FuelpriceenvfeatureGraph():
         import os # Import os
 
                                                             
-        data_path = 'https://drive.google.com/file/d/1KSNm927aKD0gYYt3u0iC0Drd8taVACFY/view?usp=sharing'
+       
+        local_data_path = '/content/Cleaneddata (5).csv'
         # Removed the file existence check as we are reading from a URL directly
 
-        if not os.path.exists(data_path):
-            print(f"Data file not found at {data_path}. Please download it.")
-            raise FileNotFoundError(f"Data file not found at {data_path}")
+        if os.path.exists(local_data_path):
+            data = pd.read_csv(local_data_path)
+            print(f"Successfully loaded data from {local_data_path}")
+        else:
+            # Handle the case where the local file is not found
+            print(f"Error: Data file not found at {local_data_path}. Please ensure it was downloaded.")
+            data = None # Or raise an error, depending on the original code's behavior
 
         try:
             csv_column_names = [
@@ -893,6 +913,7 @@ num_envs = 4  # Example value
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu") # Use GPU if available
 seed = 42 # Example seed
 episode_length = 64 # Example value
+
 
 
 
