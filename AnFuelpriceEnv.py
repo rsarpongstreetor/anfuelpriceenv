@@ -270,6 +270,103 @@ class AnFuelpriceEnv(EnvBase):
 
         self._make_specs()
 
+    
+    def _make_specs(self):
+        # Modified state_spec structure to reflect single graph per env
+        self.state_spec = Composite(
+             {
+                 ("agents", "observation"): Composite({ # Nest under "agents" key
+                     "x": Unbounded( # Node features [num_envs, num_nodes_per_graph, node_feature_dim]
+                         shape=torch.Size([self.num_envs, self.num_nodes_per_graph, self.node_feature_dim]),
+                         dtype=torch.float32,
+                         device=self.device
+                     ),
+                     "edge_index": Unbounded( # Edge indices [num_envs, 2, num_edges_per_graph]
+                         shape=torch.Size([self.num_envs, 2, self.num_edges_per_graph]),
+                         dtype=torch.int64,
+                         device=self.device
+                     ),
+                     "graph_attributes": Unbounded( # Graph attributes [num_envs, graph_attr_dim]
+                          shape=torch.Size([self.num_envs, (26-13) + (39-26)]), # Assuming this is the graph attr dim
+                          dtype=torch.float32,
+                          device=self.device
+                     ),
+                 }),
+                 ("agents", "global_reward_in_state"): Unbounded( # Agent-wise global reward in state [num_envs, num_agents, 1]
+                      shape=torch.Size([self.num_envs, self.num_agents, 1]),
+                      dtype=torch.float32,
+                      device=self.device
+                 ),
+                 # "env_batch" is not needed as a state key in the single-graph-per-env structure
+                 # The batch tensor from PyG Batch will handle mapping nodes to environments.
+                 # The env_batch tensor is generated internally by the PyGBatchProcessor.
+             },
+             # The batch size of the state spec is the number of environments
+             batch_size=self.batch_size,
+             device=self.device,
+         )
+        print(f"Modified State specification defined with single graph per env structure and batch shape {self.state_spec.shape}.")
+
+        nvec=torch.full(( self.num_individual_actions_features,), self.num_individual_actions, dtype=torch.int64, device=self.device)
+
+        agent_action_spec =MultiCategorical(nvec,
+                shape=torch.Size([self.num_individual_actions_features,]), # Shape for a single categorical variable
+                dtype=torch.int64,
+                device=self.device
+            )
+        self.action_spec_unbatched = Composite(
+              {("agents","action"): agent_action_spec}, batch_size=[self.num_agents,], device=self.device) # Removed extra comma
+
+        
+        
+
+
+        # The batched action spec for the environment should have batch_size=[num_envs]
+        # This is automatically derived by TensorDict from the unbatched spec and env batch size.
+        # We can access it via self.action_spec
+        print("\nUnbatched Multi-Agent Action specification defined using nested Composites and Categorical.")
+        print(f"Unbatched Environment action_spec: {self.action_spec_unbatched}")
+        print(f"Batched Environment action_spec: {self.action_spec}")
+
+
+        # Restored original reward spec
+        self.reward_spec = Composite(
+             {('agents', 'reward'): Unbounded(shape=torch.Size([self.num_envs, self.num_agents, 1]), dtype=torch.float32, device=self.device)},
+             batch_size=[self.num_envs],
+             device=self.device,
+        )
+        print(f"Restored Agent-wise Reward specification defined with batch shape {self.reward_spec.shape}.")
+
+        self.done_spec = Composite(
+            {
+                "done":  Categorical(
+                      n=2,
+                      shape=torch.Size([self.num_envs, 1]),
+                      dtype=torch.bool,
+                      device=self.device),
+
+                "terminated": Categorical(
+                      n=2,
+                      shape=torch.Size([self.num_envs, 1]),
+                      dtype=torch.bool,
+                      device=self.device),
+                "truncated":  Categorical(
+                     n=2,
+                     shape=torch.Size([self.num_envs, 1]),
+                      dtype=torch.bool,
+                      device=self.device),
+            },
+            batch_size=[self.num_envs],
+            device=self.device,
+        )
+        print(f"Restored Done specification defined with batch shape {self.done_spec.shape}.")
+
+        self.state_spec.unlock_(recurse=True)
+        self.action_spec.unlock_(recurse=True) # Keep action_spec unlocked as it is batched
+        self.reward_spec.unlock_(recurse=True)
+
+
+
 
     def _step(self, tensordict: TensorDictBase) -> TensorDictBase:
         self.current_data_index += 1
@@ -794,4 +891,5 @@ num_envs = 4  # Example value
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu") # Use GPU if available
 seed = 42 # Example seed
 episode_length = 64 # Example value
+
 
