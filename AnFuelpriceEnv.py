@@ -28,8 +28,8 @@ class FuelpriceenvfeatureGraph():
         import numpy as np
         import os # Import os
 
-
-        data_path = 'https://raw.githubusercontent.com/rsarpongstreetor/anfuelpriceenv/main/Cleaneddata%20(5).csv'
+                                                            
+        data_path = 'https://github.com/rsarpongstreetor/anfuelpriceenv/blob/2aa9e8a98a621058856d581defd530aaecbe5f15/Cleaneddata%20(5).csv'
         # Removed the file existence check as we are reading from a URL directly
 
         if not os.path.exists(data_path):
@@ -893,6 +893,7 @@ num_envs = 4  # Example value
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu") # Use GPU if available
 seed = 42 # Example seed
 episode_length = 64 # Example value
+
 
 
 
