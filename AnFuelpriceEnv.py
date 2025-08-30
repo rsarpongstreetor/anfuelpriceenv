@@ -373,42 +373,49 @@ class AnFuelpriceEnv(EnvBase):
         )
         print(f"Restored Agent-wise Reward specification defined with batch shape {self.reward_spec.shape}.")
 
+        # Modified done_spec to include agents dimension
         self.done_spec = Composite(
             {
-                "done":  Categorical(
+                ("agents", "done"):  Categorical( # Nested under agents
                       n=2,
-                      shape=torch.Size([self.num_envs, 1]),
+                      shape=torch.Size([self.num_envs, self.num_agents, 1]), # Include num_agents dimension
                       dtype=torch.bool,
                       device=self.device),
 
-                "terminated": Categorical(
+                ("agents", "terminated"): Categorical( # Nested under agents
                       n=2,
-                      shape=torch.Size([self.num_envs, 1]),
+                      shape=torch.Size([self.num_envs, self.num_agents, 1]), # Include num_agents dimension
                       dtype=torch.bool,
                       device=self.device),
-                "truncated":  Categorical(
+                ("agents", "truncated"):  Categorical( # Nested under agents
                      n=2,
-                     shape=torch.Size([self.num_envs, 1]),
+                     shape=torch.Size([self.num_envs, self.num_agents, 1]), # Include num_agents dimension
                       dtype=torch.bool,
                       device=self.device),
             },
             batch_size=[self.num_envs],
             device=self.device,
         )
-        print(f"Restored Done specification defined with batch shape {self.done_spec.shape}.")
+        print(f"Modified Done specification defined with agent dimension and batch shape {self.done_spec.shape}.")
 
         self.state_spec.unlock_(recurse=True)
         self.action_spec.unlock_(recurse=True) # Keep action_spec unlocked as it is batched
         self.reward_spec.unlock_(recurse=True)
-
-
+        self.done_spec.unlock_(recurse=True) # Keep done_spec unlocked
 
 
     def _step(self, tensordict: TensorDictBase) -> TensorDictBase:
         self.current_data_index += 1
 
-        terminated = self._is_terminal()
-        truncated = (self.current_data_index >= self.episode_length)
+        # Calculate global termination and truncation
+        global_terminated = self._is_terminal()
+        global_truncated = (self.current_data_index >= self.episode_length)
+
+        # Broadcast global termination and truncation to per-agent shape
+        per_agent_terminated = global_terminated.unsqueeze(-1).unsqueeze(-1).expand(self.num_envs, self.num_agents, 1)
+        per_agent_truncated = global_truncated.unsqueeze(-1).unsqueeze(-1).expand(self.num_envs, self.num_agents, 1)
+        per_agent_done = per_agent_terminated | per_agent_truncated # Per-agent done is OR of terminated and truncated
+
 
         # The action is now expected to be in the input tensordict passed to step() by the collector
         # It should be at tensordict[('agents', 'action')]
@@ -431,9 +438,12 @@ class AnFuelpriceEnv(EnvBase):
             }, batch_size=[self.num_envs], device=self.device), # Batch size for nested tensordict should be num_envs
             ("agents", "global_reward_in_state"): next_state_tensordict.get(("agents", "global_reward_in_state")),
             ('agents', 'reward'): reward_td.get(("agents", "reward")), # Get reward from reward_td
-            "terminated": terminated.unsqueeze(-1),
-            "truncated": truncated.unsqueeze(-1),
-            "done": terminated.unsqueeze(-1) | truncated.unsqueeze(-1),
+
+            # Include per-agent done, terminated, and truncated in the output tensordict under the 'agents' key
+            ("agents", "terminated"): per_agent_terminated,
+            ("agents", "truncated"): per_agent_truncated,
+            ("agents", "done"): per_agent_done,
+
             # "action": actions, # Removed: action is added by the collector, not returned by _step
             # env_batch is no longer a state key
         }, batch_size=self.batch_size, device=self.device)
@@ -451,11 +461,25 @@ class AnFuelpriceEnv(EnvBase):
              print(f"  Reward value in output tensordict: {output_tensordict.get(('agents', 'reward'))}")
         else:
              print("  Reward key ('agents', 'reward') not found in output tensordict.")
+        # Print done/terminated shapes
+        if ('agents', 'done') in output_tensordict.keys(include_nested=True):
+             print(f"  ('agents', 'done') shape: {output_tensordict.get(('agents', 'done')).shape}")
+        if ('agents', 'terminated') in output_tensordict.keys(include_nested=True):
+             print(f"  ('agents', 'terminated') shape: {output_tensordict.get(('agents', 'terminated')).shape}")
         print("-------------------------------------------")
 
 
         # Set next state directly under "next" with the root observation structure
-        output_tensordict.set("next", next_state_tensordict)
+        # The 'next' tensordict should contain the observation and termination signals for the next state
+        output_tensordict.set("next", TensorDict({
+            ("agents", "observation"): next_state_tensordict.get(("agents", "observation")),
+            ("agents", "global_reward_in_state"): next_state_tensordict.get(("agents", "global_reward_in_state")),
+            # Include per-agent done, terminated, and truncated in the 'next' tensordict as well
+            ("agents", "terminated"): per_agent_terminated,
+            ("agents", "truncated"): per_agent_truncated,
+            ("agents", "done"): per_agent_done, # Use per-agent done here
+        }, batch_size=self.batch_size, device=self.device))
+
 
         return output_tensordict
 
@@ -471,6 +495,16 @@ class AnFuelpriceEnv(EnvBase):
         else:
              self.current_data_index = torch.zeros(self.num_envs, dtype=torch.int64, device=self.device)
 
+        # Calculate initial global termination and truncation (should be False for reset)
+        global_terminated = torch.zeros(self.num_envs, dtype=torch.bool, device=self.device)
+        global_truncated = torch.zeros(self.num_envs, dtype=torch.bool, device=self.device)
+
+        # Broadcast initial global flags to per-agent shape
+        per_agent_terminated = global_terminated.unsqueeze(-1).unsqueeze(-1).expand(self.num_envs, self.num_agents, 1)
+        per_agent_truncated = global_truncated.unsqueeze(-1).unsqueeze(-1).expand(self.num_envs, self.num_agents, 1)
+        per_agent_done = per_agent_terminated | per_agent_truncated
+
+
         # Call _get_state_at with the current env indices to get the initial state
         initial_state_tensordict = self._get_state_at(torch.arange(self.num_envs, device=self.device))
 
@@ -484,20 +518,28 @@ class AnFuelpriceEnv(EnvBase):
             }, batch_size=[self.num_envs], device=self.device), # Batch size for nested tensordict should be num_envs
             ("agents", "global_reward_in_state"): initial_state_tensordict.get(("agents", "global_reward_in_state")),
             # 'temp_reward': torch.zeros(self.num_envs, self.num_agents, 1, dtype=torch.float32, device=self.device), # Initialize temporary reward
-            "terminated": torch.zeros(self.num_envs, 1, dtype=torch.bool, device=self.device),
-            "truncated": torch.zeros(self.num_envs, 1, dtype=torch.bool, device=self.device),
-            "done": torch.zeros(self.num_envs, 1, dtype=torch.bool, device=self.device),
+
+            # Include per-agent done, terminated, and truncated in the initial tensordict under the 'agents' key
+            ("agents", "terminated"): per_agent_terminated,
+            ("agents", "truncated"): per_agent_truncated,
+            ("agents", "done"): per_agent_done, # Use per-agent done here
+
             # env_batch is no longer a state key
         }, batch_size=self.batch_size, device=self.device)
 
         # Debugging print to check observation keys before returning
-        # print("\n--- Environment _reset output tensordict ---")
-        # print(f"Output tensordict keys: {initial_tensordict.keys(include_nested=True)}") # Added include_nested=True
-        # # Also print keys of nested observation tensordict
-        # if ("agents", "observation") in initial_tensordict.keys(include_nested=True): # Added include_nested=True
-        #      print(f"  Nested ('agents', 'observation') keys: {initial_tensordict.get(('agents', 'observation')).keys(include_nested=True)}") # Added include_nested=True
-        #      print(f"  Nested ('agents', 'observation') shape: {initial_tensordict.get(('agents', 'observation')).shape}")
-        # print("-------------------------------------------")
+        print("\n--- Environment _reset output tensordict ---")
+        print(f"Output tensordict keys: {initial_tensordict.keys(include_nested=True)}") # Added include_nested=True
+        # Also print keys of nested observation tensordict
+        if ("agents", "observation") in initial_tensordict.keys(include_nested=True): # Added include_nested=True
+             print(f"  Nested ('agents', 'observation') keys: {initial_tensordict.get(('agents', 'observation')).keys(include_nested=True)}") # Added include_nested=True
+             print(f"  Nested ('agents', 'observation') shape: {initial_tensordict.get(('agents', 'observation')).shape}")
+        # Print done/terminated shapes
+        if ('agents', 'done') in initial_tensordict.keys(include_nested=True):
+             print(f"  ('agents', 'done') shape: {initial_tensordict.get(('agents', 'done')).shape}")
+        if ('agents', 'terminated') in initial_tensordict.keys(include_nested=True):
+             print(f"  ('agents', 'terminated') shape: {initial_tensordict.get(('agents', 'terminated')).shape}")
+        print("-------------------------------------------")
 
 
         return initial_tensordict
@@ -532,7 +574,7 @@ class AnFuelpriceEnv(EnvBase):
 
          for i in range(num_envs_subset):
              env_idx_in_subset = i
-             data_index_for_env = state_data_index[env_idx_in_subset]
+             data_index_for_env = state_data_index[env_idx_in_subset].item()
 
 
              if out_of_bounds_mask[env_idx_in_subset]:
@@ -541,7 +583,7 @@ class AnFuelpriceEnv(EnvBase):
              else:
                  try:
                      # Extract data for the current data_index
-                     data_slice = self.combined_data[data_index_for_env.item()] # Shape [39]
+                     data_slice = self.combined_data[data_index_for_env] # Shape [39]
 
                      # Node features (x) - Shape [num_nodes_per_graph, node_feature_dim] = [num_agents, 1]
                      # Assuming the first 13 values correspond to the 13 agents' node features.
@@ -596,11 +638,11 @@ class AnFuelpriceEnv(EnvBase):
                      # Global reward in state
                      returns_for_state = data_slice[13:26] # Shape [13]
                      # Assuming global reward in state is the sum of returns for all agents (features)
-                     global_reward_in_state[env_idx_in_subset, :, :] = returns_for_state.sum().unsqueeze(-1).unsqueeze(0).expand(num_agents, -1) # Shape [num_agents, 1]
+                     global_reward_in_state[env_idx_in_subset, :, :] = returns_for_state.unsqueeze(-1) # Shape [num_agents, 1]
 
 
                  except IndexError:
-                    print(f"Warning: Data index {data_index_for_env.item()} out of bounds during state generation in _get_state_at. Using dummy data (zeros).")
+                    print(f"Warning: Data index {data_index_for_env} out of bounds during state generation in _get_state_at. Using dummy data (zeros).")
                     # Keep the corresponding slices in batches as zeros (initialized)
                     pass
 
@@ -693,6 +735,9 @@ class AnFuelpriceEnv(EnvBase):
         return seed
 
     def _is_terminal(self) -> torch.Tensor:
+        # This method seems to represent global termination, not per-agent.
+        # Based on the data structure, it's likely always False as done/terminated come from episode length.
+        # Returning a tensor of False with batch size [num_envs]
         return torch.zeros(self.num_envs, dtype=torch.bool, device=self.device)
 
 
@@ -757,16 +802,7 @@ class AnFuelpriceEnv(EnvBase):
 
                  # Based on the action spec reconstruction, the action for agent i is at ('agents', 'agent_i', 'action_feature_0') etc.
                  # If we need a single action value per agent for reward calculation, we need to decide how to combine the 13 action features.
-                 # For simplicity, let's assume for reward calculation we use the first action feature of each agent.
-                 actions_tensor_valid_flat = torch.stack([
-                      tensordict_valid_flat.get(('agents', f'agent_{i}', 'action_feature_{j}')) # Accessing nested action features
-                      for i in range(num_agents)
-                      for j in range(num_action_features) # Loop through all action features per agent
-                 ], dim=1) # Shape [num_valid_flat, num_agents * num_action_features] - This is flat action features
-
-                 # We need a single action value per agent for the reward calculation logic that follows.
-                 # The original reward logic seems to expect a single action per agent to compare against returns.
-                 # Let's use the first action feature as the representative action for each agent for reward calculation.
+                 # For simplicity, let's use the first action feature of each agent as the representative action for reward calculation.
                  actions_for_reward = torch.stack([
                       tensordict_valid_flat.get(('agents', f'agent_{i}', 'action_feature_0')) # Use the first feature
                       for i in range(num_agents)
@@ -819,15 +855,17 @@ class AnFuelpriceEnv(EnvBase):
 
 
         # Reshape rewards_flat back to the original input batch size [num_envs, num_steps, num_agents, 1]
-        # If data_indices has shape [num_envs], rewards_flat is [num_envs, num_agents, 1]. Reshape is not needed.
-        # If data_indices has shape [num_envs, num_steps], rewards_flat is [num_envs * num_steps, num_agents, 1]. Reshape to [num_envs, num_steps, num_agents, 1].
+        # If data_indices has shape [num_envs], rewards_reshaped is [num_envs, num_agents, 1].
+        # If data_indices has shape [num_envs, num_steps], rewards_reshaped is [num_envs, num_steps, num_agents, 1].
         if len(data_indices.shape) == 2:
              rewards_reshaped = rewards_flat.view(*data_indices.shape, num_agents, 1)
         else:
-             rewards_reshaped = rewards_flat # Already in the correct shape [num_envs, num_agents, 1]
+             rewards_reshaped = rewards_flat.view(*data_indices.shape, num_agents, 1) # Ensure correct shape even if num_steps is 1
+
 
         # Return rewards wrapped in a TensorDict with the expected key and original input batch size
         # The batch size of the output TensorDict should match the batch size of data_indices
+        # Reward is nested under ('agents', 'reward')
         return TensorDict({("agents", "reward"): rewards_reshaped}, batch_size=data_indices.shape, device=self.device) # Use data_indices.shape for batch size
 
 # Define variables before creating the environment instance
@@ -836,3 +874,6 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu") # Use GPU 
 seed = 42 # Example seed
 episode_length = 64 # Example value
 allow_repeat_data = False # Example value
+
+# Instantiate the environment
+base_env = AnFuelpriceEnv(num_envs=num_envs, device=device, seed=seed, episode_length=episode_length, allow_repeat_data=allow_repeat_data)
