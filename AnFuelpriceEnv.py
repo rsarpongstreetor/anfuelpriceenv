@@ -1,3 +1,5 @@
+#MultiCategorical Configuration
+
 import pandas as pd
 import os
 
@@ -913,6 +915,7 @@ num_envs = 4  # Example value
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu") # Use GPU if available
 seed = 42 # Example seed
 episode_length = 64 # Example value
+
 
 
 
