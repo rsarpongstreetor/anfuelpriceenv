@@ -34,31 +34,31 @@ class MultiCategorical_Distribution(Distribution):
         return torch.stack([d.sample(sample_shape) for d in self.dists], dim=-1)
 
 
-    def multi_categorical_maker(nvec):
-        # nvec is a list where nvec[i] is the number of actions for agent type i.
-        # Assuming all agents are of the same type with nvec[0] actions.
-        # The input logits shape is expected to be [..., num_agents, num_individual_actions_per_agent].
-        def get_multi_categorical(logits):
-            # logits shape: [..., num_agents, num_individual_actions]
-            print(f"multi_categorical_maker received logits with shape: {logits.shape}") # Add print
-            ans = []
-            num_agents = logits.shape[-2]
-            num_individual_actions = logits.shape[-1]
-            # Assuming homogeneous agents, actions_per_agent = nvec[0] if nvec is [num_actions_per_agent] * num_agents
-            # Or more generally, the sum of nvec should match the last dimension of logits.
-            # However, for creating individual Categorical distributions, we need logits per agent.
-            # The policy outputs logits of shape [..., num_agents, total_individual_actions_across_all_agents_flattened].
-            # Let's assume the policy outputs logits of shape [..., num_agents, num_individual_actions_per_agent]
-            # where num_individual_actions_per_agent = nvec[0] for homogeneous agents.
+def multi_categorical_maker(nvec):
+    # nvec is a list where nvec[i] is the number of actions for agent type i.
+    # Assuming all agents are of the same type with nvec[0] actions.
+    # The input logits shape is expected to be [..., num_agents, num_individual_actions_per_agent].
+    def get_multi_categorical(logits):
+        # logits shape: [..., num_agents, num_individual_actions]
+        print(f"multi_categorical_maker received logits with shape: {logits.shape}") # Add print
+        ans = []
+        num_agents = logits.shape[-2]
+        num_individual_actions = logits.shape[-1]
+        # Assuming homogeneous agents, actions_per_agent = nvec[0] if nvec is [num_actions_per_agent] * num_agents
+        # Or more generally, the sum of nvec should match the last dimension of logits.
+        # However, for creating individual Categorical distributions, we need logits per agent.
+        # The policy outputs logits of shape [..., num_agents, total_individual_actions_across_all_agents_flattened].
+        # Let's assume the policy outputs logits of shape [..., num_agents, num_individual_actions_per_agent]
+        # where num_individual_actions_per_agent = nvec[0] for homogeneous agents.
 
-            # The previous logic of slicing by start and start + nvec[i] was for a flattened action space output by the policy.
-            # However, the policy GCNPolicy outputs logits of shape [batch_size, num_agents, num_individual_actions].
-            # We need to create a Categorical for each agent using the logits for that agent.
+        # The previous logic of slicing by start and start + nvec[i] was for a flattened action space output by the policy.
+        # However, the policy GCNPolicy outputs logits of shape [batch_size, num_agents, num_individual_actions].
+        # We need to create a Categorical for each agent using the logits for that agent.
 
-            for i in range(num_agents):
-                # Slice logits for agent i: take all batch dimensions, then agent i, then all action dimensions
-                agent_logits = logits.select(-2, i) # Select agent i along the second to last dimension
-                print(f"Agent {i} logits shape after select: {agent_logits.shape}") # Add print
-                ans.append(Categorical(logits=agent_logits)) # Categorical batch shape will be [...]
-            return MultiCategorical(ans)
-        return get_multi_categorical
+        for i in range(num_agents):
+            # Slice logits for agent i: take all batch dimensions, then agent i, then all action dimensions
+            agent_logits = logits.select(-2, i) # Select agent i along the second to last dimension
+            print(f"Agent {i} logits shape after select: {agent_logits.shape}") # Add print
+            ans.append(Categorical(logits=agent_logits)) # Categorical batch shape will be [...]
+        return MultiCategorical(ans)
+    return get_multi_categorical
