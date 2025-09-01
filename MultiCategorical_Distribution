@@ -6,16 +6,16 @@ from typing import List
 class MultiCategorical_Distribution(Distribution):
 
     def __init__(self, dists: List[Categorical]):
-        # The batch_shape of MultiCategorical should be the batch shape of the individual distributions.
+        # The batch_shape of MultiCategorical_Distribution should be the batch shape of the individual distributions.
         # The event_shape should be the number of agents.
-        print(f"MultiCategorical init: Batch shape of first dist: {dists[0].batch_shape if dists else 'N/A'}") # Add print
+        print(f"MultiCategorical_Distribution init: Batch shape of first dist: {dists[0].batch_shape if dists else 'N/A'}") # Add print
         super().__init__(batch_shape=dists[0].batch_shape if dists else torch.Size(), event_shape=torch.Size([len(dists)]))
         self.dists = dists
 
     def log_prob(self, value):
         # value shape: [..., num_agents] - each element is the integer action for an agent
         # dists: list of Categorical distributions, one for each agent, each with batch_shape [...]
-        print(f"MultiCategorical log_prob received value with shape: {value.shape}") # Add print statement
+        print(f"MultiCategorical_Distribution log_prob received value with shape: {value.shape}") # Add print statement
         ans = []
         for i, d in enumerate(self.dists):
             # Get the action for the i-th agent across the batch
