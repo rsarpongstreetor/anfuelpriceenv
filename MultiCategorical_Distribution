@@ -1,0 +1,64 @@
+import torch
+from torch.distributions import Categorical, Distribution
+from typing import List
+
+
+class MultiCategorical(Distribution):
+
+    def __init__(self, dists: List[Categorical]):
+        # The batch_shape of MultiCategorical should be the batch shape of the individual distributions.
+        # The event_shape should be the number of agents.
+        print(f"MultiCategorical init: Batch shape of first dist: {dists[0].batch_shape if dists else 'N/A'}") # Add print
+        super().__init__(batch_shape=dists[0].batch_shape if dists else torch.Size(), event_shape=torch.Size([len(dists)]))
+        self.dists = dists
+
+    def log_prob(self, value):
+        # value shape: [..., num_agents] - each element is the integer action for an agent
+        # dists: list of Categorical distributions, one for each agent, each with batch_shape [...]
+        print(f"MultiCategorical log_prob received value with shape: {value.shape}") # Add print statement
+        ans = []
+        for i, d in enumerate(self.dists):
+            # Get the action for the i-th agent across the batch
+            # Ensure agent_action has a shape compatible with d.log_prob's batch shape
+            agent_action = value[..., i] # agent_action shape: [...]
+            print(f"Agent {i} action shape: {agent_action.shape}, Categorical batch shape: {d.batch_shape}") # Add print
+            ans.append(d.log_prob(agent_action))
+        # Stack along the agent dimension and sum
+        return torch.stack(ans, dim=-1).sum(dim=-1)
+
+    def entropy(self):
+        return torch.stack([d.entropy() for d in self.dists], dim=-1).sum(dim=-1)
+
+    def sample(self, sample_shape=torch.Size()):
+        # Sample from each individual distribution and stack along the agent dimension
+        return torch.stack([d.sample(sample_shape) for d in self.dists], dim=-1)
+
+
+    def multi_categorical_maker(nvec):
+        # nvec is a list where nvec[i] is the number of actions for agent type i.
+        # Assuming all agents are of the same type with nvec[0] actions.
+        # The input logits shape is expected to be [..., num_agents, num_individual_actions_per_agent].
+        def get_multi_categorical(logits):
+            # logits shape: [..., num_agents, num_individual_actions]
+            print(f"multi_categorical_maker received logits with shape: {logits.shape}") # Add print
+            ans = []
+            num_agents = logits.shape[-2]
+            num_individual_actions = logits.shape[-1]
+            # Assuming homogeneous agents, actions_per_agent = nvec[0] if nvec is [num_actions_per_agent] * num_agents
+            # Or more generally, the sum of nvec should match the last dimension of logits.
+            # However, for creating individual Categorical distributions, we need logits per agent.
+            # The policy outputs logits of shape [..., num_agents, total_individual_actions_across_all_agents_flattened].
+            # Let's assume the policy outputs logits of shape [..., num_agents, num_individual_actions_per_agent]
+            # where num_individual_actions_per_agent = nvec[0] for homogeneous agents.
+
+            # The previous logic of slicing by start and start + nvec[i] was for a flattened action space output by the policy.
+            # However, the policy GCNPolicy outputs logits of shape [batch_size, num_agents, num_individual_actions].
+            # We need to create a Categorical for each agent using the logits for that agent.
+
+            for i in range(num_agents):
+                # Slice logits for agent i: take all batch dimensions, then agent i, then all action dimensions
+                agent_logits = logits.select(-2, i) # Select agent i along the second to last dimension
+                print(f"Agent {i} logits shape after select: {agent_logits.shape}") # Add print
+                ans.append(Categorical(logits=agent_logits)) # Categorical batch shape will be [...]
+            return MultiCategorical(ans)
+        return get_multi_categorical
