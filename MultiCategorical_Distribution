@@ -3,7 +3,7 @@ from torch.distributions import Categorical, Distribution
 from typing import List
 
 
-class MultiCategorical(Distribution):
+class MultiCategorical_Distribution(Distribution):
 
     def __init__(self, dists: List[Categorical]):
         # The batch_shape of MultiCategorical should be the batch shape of the individual distributions.
