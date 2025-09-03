@@ -332,38 +332,41 @@ class AnFuelpriceEnv(EnvBase):
          )
         print(f"Modified State specification defined with single graph per env structure and batch shape {self.state_spec.shape}.")
 
-        nvec=torch.full(( self.num_agents, self.num_individual_actions_features,), self.num_individual_actions, dtype=torch.int64, device=self.device)
+        nvec_list = [self.num_individual_actions] * self.num_individual_actions_features
+        nvec_tensor = torch.tensor(nvec_list, dtype=torch.int64, device=self.device)
 
-        # Corrected agent_action_spec shape to be just the action features for a single agent
-        agent_action_spec =MultiCategorical(nvec,
-                shape=torch.Size([self.num_agents,]), # Shape for a single agent's action features
+
+        # Corrected agent_action_spec shape to be for a single agent, only defining the action features.
+        # The shape here should be just the shape of the action for a single agent, which is a tensor of size [num_individual_actions_features].
+        agent_action_spec = MultiCategorical(nvec=nvec_tensor, # Pass the correctly shaped nvec_tensor
+                # The shape argument here defines the shape of the *unbatched* action tensor for a single agent.
+                # It should match the shape of nvec if nvec defines categories for each element in the action tensor.
+                shape=torch.Size([self.num_individual_actions_features,]),
                 dtype=torch.int64,
                 device=self.device
             )
-        # Corrected full_action_spec batch size to include num_envs and num_agents
-        # The Composite should have the full batch size of the environment ([num_envs]) and the agent dimension ([num_agents]).
-        # The shape of the item within the composite should be the shape of the action for a single agent.
-        
-
-
-
-
-        # The batched action spec for the environment should have batch_size=[num_envs]
-        # This is automatically derived by TensorDict from the unbatched spec and env batch size.
-        # We can access it via self.action_spec
         print("\nUnbatched Multi-Agent Action specification defined using nested Composites and Categorical.")
-        # The unbatched action spec should be for a single environment, but include the agents dimension
+        # The unbatched action spec should be for a single environment, but include the agents dimension.
+        # The shape here should reflect the actions for all agents in a single environment.
         self.action_spec_unbatched = Composite(
-              {("agents","action"): MultiCategorical(nvec,
-                                                      shape=torch.Size([self.num_agents,]), # Shape for multi-agent categorical in a single env
+              {("agents","action"): MultiCategorical(nvec=nvec_tensor, # Use the correctly shaped nvec_tensor
+                                                      shape=torch.Size([self.num_agents, self.num_individual_actions_features]), # Shape for multi-agent categorical in a single env
                                                       dtype=torch.int64,
                                                       device=self.device)},
               batch_size=[], # Unbatched environment has no batch size at the root
               device=self.device
             )
-
+        
+       
+       
+        self.full_action_spec=  Composite( {("agents","action") : agent_action_spec}, batch_size=[self.num_envs, self.num_agents], device=self.device)
+        # Corrected full_action_spec batch size to include num_envs and num_agents.
+        # The Composite should have the full batch size of the environment ([num_envs]) and the agent dimension ([num_agents]).
+        # The item within the composite ("agents","action") should be the agent_action_spec, and the Composite's batch_size will handle the rest.
+        # The batch_size of the Composite is applied *before* the shape of the contained spec.
         print(f"Unbatched Environment action_spec: {self.action_spec_unbatched}")
         print(f"Batched Environment action_spec: {self.action_spec}")
+        
 
 
         # Restored original reward spec
@@ -372,6 +375,7 @@ class AnFuelpriceEnv(EnvBase):
              batch_size=[self.num_envs],
              device=self.device,
         )
+       
         print(f"Restored Agent-wise Reward specification defined with batch shape {self.reward_spec.shape}.")
 
         self.done_spec = Composite(
@@ -817,3 +821,4 @@ class AnFuelpriceEnv(EnvBase):
         # Return rewards wrapped in a TensorDict with the expected key and original input batch size
         # The batch size of the output TensorDict should match the batch size of data_indices
         return TensorDict({("agents", "reward"): rewards_reshaped}, batch_size=data_indices.shape, device=self.device) # Use data_indices.shape for batch size
+
