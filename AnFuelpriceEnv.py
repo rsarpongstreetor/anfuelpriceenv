@@ -45,8 +45,8 @@ class FuelpriceenvfeatureGraph():
         import numpy as np
         import os # Import os
 
-                                                            
-       
+
+
         local_data_path = '/content/anfuelpriceenv/Cleaneddata (5).csv'
         # Removed the file existence check as we are reading from a URL directly
 
@@ -294,7 +294,7 @@ class AnFuelpriceEnv(EnvBase):
 
         self._make_specs()
 
-    
+
     def _make_specs(self):
         # Modified state_spec structure to reflect single graph per env
         self.state_spec = Composite(
@@ -341,8 +341,10 @@ class AnFuelpriceEnv(EnvBase):
         self.action_spec_unbatched = Composite(
               {("agents","action"): agent_action_spec}, batch_size=[self.num_agents,], device=self.device) # Removed extra comma
 
-        
-        
+        self.full_action_spec=  Composite( {("agents","action") : agent_action_spec}, batch_size=[self.num_envs, self.num_agents], device=self.device)
+
+
+
 
 
         # The batched action spec for the environment should have batch_size=[num_envs]
@@ -399,114 +401,6 @@ class AnFuelpriceEnv(EnvBase):
         truncated = (self.current_data_index >= self.episode_length)
 
         # The action is now expected to be in the input tensordict passed to step() by the collector
-        # Ensure 'actions' is a TensorDict and get the action tensor
-        actions_td_input = tensordict.get('agents', None) # Get the nested 'agents' tensordict if it exists
-        actions = None # Initialize actions variable
-
-        if actions_td_input is not None and isinstance(actions_td_input, TensorDictBase):
-             actions = actions_td_input.get('action', None) # Get the 'action' tensor
-             if actions is None:
-                  print("Warning: 'action' key not found under ('agents') in input tensordict. Using zeros for actions.")
-                  actions = torch.zeros(self.num_envs, self.num_agents, dtype=torch.int64, device=self.device) # Provide default actions
-        elif isinstance(tensordict, TensorDictBase) and ('agents', 'action') in tensordict.keys(include_nested=True):
-             # Direct access if action is directly under ('agents', 'action')
-             actions = tensordict.get(('agents', 'action'))
-        elif isinstance(tensordict, torch.Tensor):
-             # If the input is a raw tensor, assume it's the actions [num_envs, num_agents]
-             # print("Warning: Input to _step is a raw tensor. Assuming it is the actions tensor.")
-             actions = tensordict # Assume tensor is actions
-             # We might need to reshape actions if it's flat
-             if actions.shape[-1] == self.num_agents * self.num_individual_actions_features:
-                  actions = actions.view(*actions.shape[:-1], self.num_agents, self.num_individual_actions_features)
-             elif actions.shape[-1] == self.num_agents: # Assume scalar action per agent
-                  actions = actions.unsqueeze(-1) # Add feature dimension if missing [num_envs, num_agents, 1]
-
-        else:
-             print("Error: Could not find actions in the input tensordict/tensor. Using zeros for actions.")
-             actions = torch.zeros(self.num_envs, self.num_agents, dtype=torch.int64, device=self.device) # Provide default actions
-
-        # --- Explicitly convert actions tensor to TensorDict if it's a tensor ---
-        # Check if actions is a tensor (and not already part of a nested TensorDict structure we want to preserve)
-        # A simple check is if it's a torch.Tensor and doesn't have a parent TensorDict (which is not directly accessible easily)
-        # A more practical check is if the original input was a raw tensor or a flat tensordict containing the action tensor directly.
-        # Based on previous errors, 'actions' might sometimes be a raw tensor passed from the collector/tensordict.
-        # Let's assume that if actions is a torch.Tensor AND the original input tensordict doesn't have the ('agents', 'action') key in a way we expect,
-        # we wrap the actions tensor in a TensorDict. This is a heuristic based on observed behavior.
-
-        # Re-check if the action was found in the expected nested structure
-        action_found_nested = actions_td_input is not None and isinstance(actions_td_input, TensorDictBase) and 'action' in actions_td_input.keys()
-        action_found_direct_nested = isinstance(tensordict, TensorDictBase) and ('agents', 'action') in tensordict.keys(include_nested=True)
-
-
-        # If actions is a tensor AND it wasn't found nested in the expected way, wrap it.
-        # This might be too aggressive. Let's refine the condition.
-        # Assume 'actions' is the tensor we extracted or was passed raw.
-        # If it's a tensor, wrap it. The _batch_reward expects a TensorDict.
-        # The structure should be a TensorDict with batch_size=[num_envs]
-        # and a nested TensorDict under 'agents' with the action tensor.
-        # However, _batch_reward is designed to take the action tensor directly now.
-        # Let's revert the change in _batch_reward and make sure actions is a TensorDict before calling it.
-
-        # --- Revert _batch_reward to expect a TensorDict ---
-        # This requires modifying _batch_reward signature and logic.
-        # Let's stick to the current _batch_reward which handles raw tensor for now,
-        # and ensure the input 'actions' variable here is the tensor.
-
-        # Let's go back to the original approach where _batch_reward expected a TensorDict
-        # and fix the input to _batch_reward instead.
-
-        # --- Reverting _batch_reward to expect TensorDict ---
-        # This requires changing the signature and logic of _batch_reward.
-        # Instead of modifying _batch_reward again, let's focus on ensuring the input to _step
-        # is structured correctly by the collector.
-        # The collector is supposed to call the policy (policy_module_td) which returns a TensorDict with ('agents', 'action').
-        # This TensorDict should then be passed to _step.
-        # The issue might be how the collector or the env.step() is handling the output of the policy and the input to _step.
-
-        # Let's assume the input 'tensordict' to _step *should* contain the policy output
-        # under ('agents', 'action'). If it's a raw tensor, it's a collector issue.
-        # If it's a TensorDict without the key, the policy or collector is not populating it.
-
-        # Let's restore the _batch_reward to expect a TensorDict for consistency
-        # and debug why the input to _step doesn't have the action in the expected place.
-
-        # --- Restoring _batch_reward signature and logic to expect TensorDict ---
-        # This requires modifying _batch_reward again. Let's do that.
-
-        # For now, let's continue with the current _batch_reward which accepts a tensor,
-        # and try to understand why the action tensor is sometimes raw.
-
-        # Let's assume `actions` here is the tensor extracted from the input tensordict or passed raw.
-        # The _batch_reward method (as modified in previous steps) expects a tensor.
-        # So, passing 'actions' directly to _batch_reward is correct *with the current _batch_reward implementation*.
-
-        # The user's query is about converting 'it' to a tensordict. 'it' likely refers to the action tensor passed to _batch_reward.
-        # Converting the action tensor to a TensorDict here would mean creating a TensorDict like:
-        # TensorDict({('agents', 'action'): actions_tensor}, batch_size=...)
-        # and then passing this TensorDict to a _batch_reward that expects a TensorDict.
-
-        # Let's revert _batch_reward to expect a TensorDict and modify _step to pass a TensorDict to it.
-
-
-        # --- Reverting _batch_reward to expect TensorDict and modifying _step ---
-        # Modify _batch_reward first (in the same modify_cells block).
-
-        # (Code for _batch_reward modification will be below in this block)
-
-        # After _batch_reward is modified to expect TensorDict:
-        # We need to ensure `tensordict` (the input to _step) contains the action under ('agents', 'action')
-        # and pass this nested tensordict to _batch_reward.
-
-        # Let's assume the input `tensordict` to _step *does* contain the action under ('agents', 'action')
-        # as expected from a collector interacting with a policy wrapped in TensorDictModule.
-        # The previous error "AttributeError: 'Tensor' object has no attribute 'get'" in _batch_reward
-        # happened because `actions` inside _batch_reward was a tensor, not a TensorDict.
-        # This suggests the collector/torchrl was passing the action tensor directly, not the nested tensordict.
-
-        # Let's modify _batch_reward to accept a TensorDict again, and modify _step to pass the relevant part of the input tensordict to it.
-
-
-        # The action is expected to be in the input tensordict passed to step() by the collector
         # It should be at tensordict[('agents', 'action')]
 
         # Pass the input tensordict directly to _batch_reward
@@ -551,7 +445,10 @@ class AnFuelpriceEnv(EnvBase):
 
 
         # Set next state directly under "next" with the root observation structure
-        output_tensordict.set("next", next_state_tensordict)
+        # REMOVED: This explicit setting of "next" is causing the check_env_specs error.
+        # torchrl handles adding the "next" key internally based on the returned tensordict structure.
+        # output_tensordict.set("next", next_state_tensordict)
+
 
         return output_tensordict
 
@@ -909,18 +806,3 @@ class AnFuelpriceEnv(EnvBase):
         # Return rewards wrapped in a TensorDict with the expected key and original input batch size
         # The batch size of the output TensorDict should match the batch size of data_indices
         return TensorDict({("agents", "reward"): rewards_reshaped}, batch_size=data_indices.shape, device=self.device) # Use data_indices.shape for batch size
-
-# Define variables before creating the environment instance
-num_envs = 4  # Example value
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu") # Use GPU if available
-seed = 42 # Example seed
-episode_length = 64 # Example value
-
-
-
-
-
-
-
-
-
