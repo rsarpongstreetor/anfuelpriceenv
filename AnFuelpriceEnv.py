@@ -412,7 +412,7 @@ class AnFuelpriceEnv(EnvBase):
 
         # The action is now expected to be in the input tensordict passed to step() by the collector
         # It should be at tensordict[('agents', 'action')]
-
+        actions=tensordict[('agents', 'action')]   
         # Pass the input tensordict directly to _batch_reward
         # _batch_reward will need to extract the action from this tensordict
         reward_td = self._batch_reward(self.current_data_index, tensordict) # Pass the entire input tensordict
@@ -444,10 +444,34 @@ class AnFuelpriceEnv(EnvBase):
              print("  Reward key ('agents', 'reward') not found in output tensordict.")
         print("-------------------------------------------")
 
+        
+
 
         # Return the next_state_tensordict with reward and done flags included
         # torchrl will automatically put this under the "next" key when collected
         return next_state_tensordict
+        output_tensordict = TensorDict({
+            ("agents", "observation"): TensorDict({
+                 "x": next_state_tensordict.get(("agents", "observation", "x")),
+                 "edge_index": next_state_tensordict.get(("agents", "observation", "edge_index")),
+                 "graph_attributes": next_state_tensordict.get(("agents", "observation", "graph_attributes")),
+            }, batch_size=[self.num_envs], device=self.device), # Batch size for nested tensordict should be num_envs
+            ("agents", "global_reward_in_state"): next_state_tensordict.get(("agents", "global_reward_in_state")),
+            ('agents', 'reward'): reward_td.get(("agents", "reward")), # Get reward from reward_td
+
+            # Include per-agent done, terminated, and truncated in the output tensordict under the 'agents' key
+            ("agents", "terminated"): per_agent_terminated,
+            ("agents", "truncated"): per_agent_truncated,
+            ("agents", "done"): per_agent_done,
+
+            # "action": actions, # Removed: action is added by the collector, not returned by _step
+            # env_batch is no longer a state key
+        }, batch_size=self.batch_size, device=self.device)
+
+        return output_tensordict
+
+
+    
 
 
     def _reset(self, tensordict: Optional[TensorDictBase] = None) -> TensorDictBase:
@@ -730,3 +754,4 @@ class AnFuelpriceEnv(EnvBase):
         # Return rewards wrapped in a TensorDict with the expected key and original input batch size
         # The batch size of the output TensorDict should match the batch size of data_indices
         return TensorDict({("agents", "reward"): rewards_reshaped}, batch_size=data_indices.shape, device=self.device) # Use data_indices.shape for batch size
+
