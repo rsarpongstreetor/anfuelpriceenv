@@ -238,9 +238,6 @@ class FuelpriceenvfeatureGraph():
         raise NotImplementedError("get_graph_tensor is not used in this version.")
 
 
-
-
-
 class AnFuelpriceEnv(EnvBase):
     def __init__(self, num_envs, device, seed, **kwargs):
         self.episode_length = kwargs.get('episode_length', 100)
@@ -295,6 +292,10 @@ class AnFuelpriceEnv(EnvBase):
         self._make_specs()
 
 
+
+        self._make_specs()
+
+
     def _make_specs(self):
         # Modified state_spec structure to reflect single graph per env
         self.state_spec = Composite(
@@ -331,18 +332,18 @@ class AnFuelpriceEnv(EnvBase):
          )
         print(f"Modified State specification defined with single graph per env structure and batch shape {self.state_spec.shape}.")
 
-        nvec=torch.full(( self.num_individual_actions_features,), self.num_individual_actions, dtype=torch.int64, device=self.device)
+        nvec=torch.full(( self.num_agents, self.num_individual_actions_features,), self.num_individual_actions, dtype=torch.int64, device=self.device)
 
+        # Corrected agent_action_spec shape to be just the action features for a single agent
         agent_action_spec =MultiCategorical(nvec,
-                shape=torch.Size([self.num_individual_actions_features,]), # Shape for a single categorical variable
+                shape=torch.Size([self.num_agents,]), # Shape for a single agent's action features
                 dtype=torch.int64,
                 device=self.device
             )
-        self.action_spec_unbatched = Composite(
-              {("agents","action"): agent_action_spec}, batch_size=[self.num_agents,], device=self.device) # Removed extra comma
-
-        self.full_action_spec=  Composite( {("agents","action") : agent_action_spec}, batch_size=[self.num_envs, self.num_agents], device=self.device)
-
+        # Corrected full_action_spec batch size to include num_envs and num_agents
+        # The Composite should have the full batch size of the environment ([num_envs]) and the agent dimension ([num_agents]).
+        # The shape of the item within the composite should be the shape of the action for a single agent.
+        
 
 
 
@@ -351,6 +352,16 @@ class AnFuelpriceEnv(EnvBase):
         # This is automatically derived by TensorDict from the unbatched spec and env batch size.
         # We can access it via self.action_spec
         print("\nUnbatched Multi-Agent Action specification defined using nested Composites and Categorical.")
+        # The unbatched action spec should be for a single environment, but include the agents dimension
+        self.action_spec_unbatched = Composite(
+              {("agents","action"): MultiCategorical(nvec,
+                                                      shape=torch.Size([self.num_agents,]), # Shape for multi-agent categorical in a single env
+                                                      dtype=torch.int64,
+                                                      device=self.device)},
+              batch_size=[], # Unbatched environment has no batch size at the root
+              device=self.device
+            )
+
         print(f"Unbatched Environment action_spec: {self.action_spec_unbatched}")
         print(f"Batched Environment action_spec: {self.action_spec}")
 
@@ -475,7 +486,7 @@ class AnFuelpriceEnv(EnvBase):
                  "edge_index": initial_state_tensordict.get(("agents", "observation", "edge_index")),
                  "graph_attributes": initial_state_tensordict.get(("agents", "observation", "graph_attributes")),
             }, batch_size=[self.num_envs], device=self.device), # Batch size for nested tensordict should be num_envs
-            ("agents", "global_reward_in_state"): initial_state_tensordict.get(("agents", "global_reward_in_state")),
+            ("agents", "global_reward_in_state"): initial_state_tensordict.get(("agents", "global", "global_reward_in_state")),
             # 'temp_reward': torch.zeros(self.num_envs, self.num_agents, 1, dtype=torch.float32, device=self.device), # Initialize temporary reward
             "terminated": torch.zeros(self.num_envs, 1, dtype=torch.bool, device=self.device),
             "truncated": torch.zeros(self.num_envs, 1, dtype=torch.bool, device=self.device),
@@ -568,7 +579,7 @@ class AnFuelpriceEnv(EnvBase):
 
                      # Ensure slices are not empty before concatenating
                      if graph_attributes_part1.numel() > 0 and graph_attributes_part2.numel() > 0:
-                          graph_attributes = torch.cat([graph_attributes_part1, graph_attributes_part2], dim=0).to(self.device) # Shape [26]
+                          graph_attributes = torch.cat([graph_attributes_part1, graph_attributes_part2], dim=0).to(self.device)
                      elif graph_attributes_part1.numel() > 0:
                           graph_attributes = graph_attributes_part1.to(self.device)
                           # Pad if needed to match graph_attr_dim
