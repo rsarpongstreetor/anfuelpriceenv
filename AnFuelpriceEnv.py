@@ -359,11 +359,8 @@ class AnFuelpriceEnv(EnvBase):
         
        
        
-        self.full_action_spec=  Composite( {("agents","action") : agent_action_spec}, batch_size=[self.num_envs, self.num_agents], device=self.device)
-        # Corrected full_action_spec batch size to include num_envs and num_agents.
-        # The Composite should have the full batch size of the environment ([num_envs]) and the agent dimension ([num_agents]).
-        # The item within the composite ("agents","action") should be the agent_action_spec, and the Composite's batch_size will handle the rest.
-        # The batch_size of the Composite is applied *before* the shape of the contained spec.
+        
+        
         print(f"Unbatched Environment action_spec: {self.action_spec_unbatched}")
         print(f"Batched Environment action_spec: {self.action_spec}")
         
@@ -821,5 +818,6 @@ class AnFuelpriceEnv(EnvBase):
         # Return rewards wrapped in a TensorDict with the expected key and original input batch size
         # The batch size of the output TensorDict should match the batch size of data_indices
         return TensorDict({("agents", "reward"): rewards_reshaped}, batch_size=data_indices.shape, device=self.device) # Use data_indices.shape for batch size
+
 
 
