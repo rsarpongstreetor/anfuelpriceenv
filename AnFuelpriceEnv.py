@@ -293,7 +293,7 @@ class AnFuelpriceEnv(EnvBase):
 
 
 
-        self._make_specs()
+    
 
 
     def _make_specs(self):
@@ -821,4 +821,5 @@ class AnFuelpriceEnv(EnvBase):
         # Return rewards wrapped in a TensorDict with the expected key and original input batch size
         # The batch size of the output TensorDict should match the batch size of data_indices
         return TensorDict({("agents", "reward"): rewards_reshaped}, batch_size=data_indices.shape, device=self.device) # Use data_indices.shape for batch size
+
 
