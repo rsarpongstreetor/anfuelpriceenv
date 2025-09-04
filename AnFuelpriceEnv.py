@@ -270,6 +270,7 @@ class AnFuelpriceEnv(EnvBase):
                           device=self.device
                      ),
                  }),
+                 # global_reward_in_state remains a top-level key
                  ("agents", "global_reward_in_state"): Unbounded( # Agent-wise global reward in state [num_envs, num_agents, 1]
                       shape=torch.Size([self.num_envs, self.num_agents, 1]),
                       dtype=torch.float32,
@@ -294,27 +295,28 @@ class AnFuelpriceEnv(EnvBase):
                                device=self.device
                           ),
                       }),
+                      # global_reward_in_state remains a top-level key under "next"
                       ("agents", "global_reward_in_state"): Unbounded( # Agent-wise global reward in state [num_envs, num_agents, 1]
                            shape=torch.Size([self.num_envs, self.num_agents, 1]),
                            dtype=torch.float32,
                            device=self.device
                       ),
-                      # Also include reward and done keys under 'next' as they are part of the next state info
+                      # Also include reward key under 'next' as it is part of the next state info
                       ('agents', 'reward'): Unbounded(shape=torch.Size([self.num_envs, self.num_agents, 1]), dtype=torch.float32, device=self.device),
-                      "terminated": Categorical(
+                      # Moved done, terminated, truncated under ("agents",)
+                      ("agents", "terminated"): Categorical(
                             n=2,
-                            shape=torch.Size([self.num_envs, 1]),
+                            shape=torch.Size([self.num_envs, 1]), # Shape should be [num_envs, 1] as done/terminated/truncated are per env
                             dtype=torch.bool,
                             device=self.device),
-
-                       "truncated":  Categorical(
+                       ("agents", "truncated"):  Categorical(
                             n=2,
-                            shape=torch.Size([self.num_envs, 1]),
+                            shape=torch.Size([self.num_envs, 1]), # Shape should be [num_envs, 1]
                              dtype=torch.bool,
                              device=self.device),
-                       "done":  Categorical(
+                       ("agents", "done"):  Categorical(
                             n=2,
-                            shape=torch.Size([self.num_envs, 1]),
+                            shape=torch.Size([self.num_envs, 1]), # Shape should be [num_envs, 1]
                              dtype=torch.bool,
                              device=self.device),
                  }),
@@ -382,22 +384,23 @@ class AnFuelpriceEnv(EnvBase):
 
         # Define the done_spec to match the structure of the done keys
         # returned by _step.
+        # Moved done, terminated, truncated under ("agents",)
         self.done_spec = Composite(
             {
-                "done":  Categorical(
+                ("agents", "done"):  Categorical(
                       n=2,
-                      shape=torch.Size([self.num_envs, 1]),
+                      shape=torch.Size([self.num_envs, 1]), # Shape should be [num_envs, 1]
                       dtype=torch.bool,
                       device=self.device),
 
-                "terminated": Categorical(
+                ("agents", "terminated"): Categorical(
                       n=2,
-                      shape=torch.Size([self.num_envs, 1]),
+                      shape=torch.Size([self.num_envs, 1]), # Shape should be [num_envs, 1]
                       dtype=torch.bool,
                       device=self.device),
-                "truncated":  Categorical(
+                ("agents", "truncated"):  Categorical(
                      n=2,
-                     shape=torch.Size([self.num_envs, 1]),
+                     shape=torch.Size([self.num_envs, 1]), # Shape should be [num_envs, 1]
                       dtype=torch.bool,
                       device=self.device),
             },
@@ -433,9 +436,10 @@ class AnFuelpriceEnv(EnvBase):
         # Update the next_state_tensordict with reward and done flags
         # These keys should be at the root level of the tensordict returned by _step
         next_state_tensordict.set(('agents', 'reward'), reward_td.get(('agents', 'reward')))
-        next_state_tensordict.set('terminated', terminated.unsqueeze(-1))
-        next_state_tensordict.set('truncated', truncated.unsqueeze(-1))
-        next_state_tensordict.set('done', terminated.unsqueeze(-1) | truncated.unsqueeze(-1))
+        # Set done, terminated, truncated under ("agents",)
+        next_state_tensordict.set(('agents', 'terminated'), terminated.unsqueeze(-1))
+        next_state_tensordict.set(('agents', 'truncated'), truncated.unsqueeze(-1))
+        next_state_tensordict.set(('agents', 'done'), terminated.unsqueeze(-1) | truncated.unsqueeze(-1))
 
 
         # Debugging print to check observation keys and reward before returning
@@ -451,6 +455,14 @@ class AnFuelpriceEnv(EnvBase):
              print(f"  Reward value in output tensordict: {next_state_tensordict.get(('agents', 'reward'))}")
         else:
              print("  Reward key ('agents', 'reward') not found in output tensordict.")
+        # Print done keys to verify their location
+        if ("agents", "done") in next_state_tensordict.keys(include_nested=True):
+             print(f"  ('agents', 'done') value: {next_state_tensordict.get(('agents', 'done'))}")
+        if ("agents", "terminated") in next_state_tensordict.keys(include_nested=True):
+             print(f"  ('agents', 'terminated') value: {next_state_tensordict.get(('agents', 'terminated'))}")
+        if ("agents", "truncated") in next_state_tensordict.keys(include_nested=True):
+             print(f"  ('agents', 'truncated') value: {next_state_tensordict.get(('agents', 'truncated'))}")
+
         print("-------------------------------------------")
 
 
@@ -481,9 +493,10 @@ class AnFuelpriceEnv(EnvBase):
         # The initial tensordict should contain the initial state keys at the root.
         # It should also include the done flags initialized to False.
         initial_tensordict = initial_state_tensordict.clone() # Start with the initial state structure
-        initial_tensordict.set("terminated", torch.zeros(self.num_envs, 1, dtype=torch.bool, device=self.device))
-        initial_tensordict.set("truncated", torch.zeros(self.num_envs, 1, dtype=torch.bool, device=self.device))
-        initial_tensordict.set("done", torch.zeros(self.num_envs, 1, dtype=torch.bool, device=self.device))
+        # Set done, terminated, truncated under ("agents",)
+        initial_tensordict.set(("agents", "terminated"), torch.zeros(self.num_envs, 1, dtype=torch.bool, device=self.device))
+        initial_tensordict.set(("agents", "truncated"), torch.zeros(self.num_envs, 1, dtype=torch.bool, device=self.device))
+        initial_tensordict.set(("agents", "done"), torch.zeros(self.num_envs, 1, dtype=torch.bool, device=self.device))
         # 'temp_reward' is not needed in the initial tensordict
 
 
@@ -821,5 +834,3 @@ class AnFuelpriceEnv(EnvBase):
         # Return rewards wrapped in a TensorDict with the expected key and original input batch size
         # The batch size of the output TensorDict should match the batch size of data_indices
         return TensorDict({("agents", "reward"): rewards_reshaped}, batch_size=original_batch_shape, device=self.device) # Use original_batch_shape for batch size
-
-# --- End of content of cell qd7bUyoPp98x ---
