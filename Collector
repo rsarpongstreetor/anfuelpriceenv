@@ -1,0 +1,61 @@
+# Assuming 'env' is already instantiated and working correctly from previous steps
+
+# Data collection configuration
+frames_per_batch = 1000 # Number of frames to collect in each batch
+total_frames = 10000 # Total number of frames to collect
+
+# Create a SyncDataCollector
+collector = SyncDataCollector(
+    env,
+    frames_per_batch=frames_per_batch,
+    total_frames=total_frames,
+    device=device, # Use the same device as the environment
+    # You can add other arguments like max_steps_per_env if needed
+)
+
+print(f"Data collector created to collect {total_frames} frames with {frames_per_batch} frames per batch.")
+
+# Collect data
+print("\nCollecting data...")
+collected_data_list = [] # Use a list to store collected batches
+
+# Use the correct method to start collection and iterate
+for i, data_batch in enumerate(collector):
+    print(f"Collected batch {i+1} with batch size: {data_batch.batch_size}")
+    # You can process each data_batch here as needed
+    # For now, let's just store them in a list
+    collected_data_list.append(data_batch.clone()) # Clone to avoid issues with internal collector state
+
+    # Optional: break after collecting enough data if total_frames is not set
+    # if (i + 1) * frames_per_batch >= total_frames:
+    #     break
+
+print("Data collection finished.")
+
+# Concatenate the list of TensorDicts if needed for further processing
+if collected_data_list:
+    # You can concatenate along the time dimension (dim=0) if each batch is a timestep
+    # or along the batch dimension if each batch is an independent set of trajectories
+    # For SyncDataCollector, each 'data_batch' from the iterator has batch size [frames_per_batch]
+    # We can stack them to get a final TensorDict with batch size [num_batches, frames_per_batch]
+    collected_data = torch.cat(collected_data_list, dim=0) # Assuming concatenation along the batch dimension
+
+    print("\n--- Collected Data TensorDict ---")
+    print(collected_data)
+    print(f"Collected data total size: {collected_data.batch_size}")
+    print(f"Collected data keys: {collected_data.keys(include_nested=True)}")
+    print("---------------------------------")
+
+    # You can access specific tensors within the collected_data, for example:
+    # observations = collected_data.get(("agents", "observation"))
+    # actions = collected_data.get(("agents", "action"))
+    # rewards = collected_data.get(("agents", "reward"))
+    # dones = collected_data.get("done")
+
+    # print(f"Shape of collected observations: {observations.shape}")
+    # print(f"Shape of collected actions: {actions.shape}")
+    # print(f"Shape of collected rewards: {rewards.shape}")
+    # print(f"Shape of collected dones: {dones.shape}")
+
+else:
+    print("No data was collected.")
