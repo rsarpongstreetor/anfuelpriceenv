@@ -203,7 +203,7 @@ class AnFuelpriceEnv(EnvBase):
         self.graph_generator.num_nodes_per_graph = self.num_agents
 
         self.graph_generator.device = self.device
-        self.graph_generator.allow_repeat_data = self.allow_generator.allow_repeat_data
+        self.graph_generator.allow_repeat_data = self.allow_repeat_data
         
         self.graph_generator._load_data()
         self.combined_data = self.graph_generator.combined_data
