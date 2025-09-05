@@ -203,9 +203,8 @@ class AnFuelpriceEnv(EnvBase):
         self.graph_generator.num_nodes_per_graph = self.num_agents
 
         self.graph_generator.device = self.device
-        self.graph_generator.allow_repeat_data = self.allow_repeat_data
-
-
+        self.graph_generator.allow_repeat_data = self.allow_generator.allow_repeat_data
+        
         self.graph_generator._load_data()
         self.combined_data = self.graph_generator.combined_data
 
@@ -270,12 +269,7 @@ class AnFuelpriceEnv(EnvBase):
                           device=self.device
                      ),
                  }),
-                 # global_reward_in_state is now nested under ("agents",)
-                 ("agents", "global_reward_in_state"): Unbounded( # Agent-wise global reward in state [num_envs, num_agents, 1]
-                      shape=torch.Size([self.num_envs, self.num_agents, 1]),
-                      dtype=torch.float32,
-                      device=self.device
-                 ),
+                 # Removed global_reward_in_state from state_spec
                  # Added top-level done, terminated, truncated keys for the current state
                  "done": Categorical(
                       n=2,
@@ -311,12 +305,7 @@ class AnFuelpriceEnv(EnvBase):
                                device=self.device
                           ),
                       }),
-                      # global_reward_in_state is now nested under ("agents",) under "next"
-                      ("agents", "global_reward_in_state"): Unbounded( # Agent-wise global reward in state [num_envs, num_agents, 1]
-                           shape=torch.Size([self.num_envs, self.num_agents, 1]),
-                           dtype=torch.float32,
-                           device=self.device
-                      ),
+                      # Removed global_reward_in_state from next state spec
                       # Also include reward key under ('agents',) under 'next'
                       ('agents', 'reward'): Unbounded(shape=torch.Size([self.num_envs, self.num_agents, 1]), dtype=torch.float32, device=self.device),
                        # done, terminated, truncated keys under ('agents',) under 'next'
@@ -597,7 +586,7 @@ class AnFuelpriceEnv(EnvBase):
          x_batch = torch.zeros(num_envs_subset, num_nodes_per_graph, node_feature_dim, device=self.device)
          edge_index_batch = torch.zeros(num_envs_subset, 2, num_edges_per_graph, dtype=torch.int64, device=self.device)
          graph_attributes_batch = torch.zeros(num_envs_subset, graph_attr_dim, device=self.device)
-         global_reward_in_state = torch.zeros(num_envs_subset, num_agents, 1, dtype=torch.float32, device=self.device)
+         # Removed initialization of global_reward_in_state
 
 
          for i in range(num_envs_subset):
@@ -672,8 +661,7 @@ class AnFuelpriceEnv(EnvBase):
                   "edge_index": edge_index_batch,
                   "graph_attributes": graph_attributes_batch,
              }, batch_size=[num_envs_subset], device=self.device),
-             # global_reward_in_state is now nested under ("agents",)
-             ("agents", "global_reward_in_state"): global_reward_in_state,
+             # Removed global_reward_in_state from state tensordict construction
              # Added top-level done, terminated, truncated keys
              "done": torch.zeros(num_envs_subset, 1, dtype=torch.bool, device=self.device),
              "terminated": torch.zeros(num_envs_subset, 1, dtype=torch.bool, device=self.device),
@@ -778,10 +766,7 @@ class AnFuelpriceEnv(EnvBase):
             # The action tensor inside the input tensordict to _step will have batch shape [num_envs]
             # and action tensor shape [num_agents, num_action_features].
             # The action tensor inside the tensordict passed to _batch_reward (which is the same tensordict from _step)
-            # will have batch shape [num_envs] and action tensor shape [num_agents, num_action_features].
-            # When _batch_reward is called from rollout, data_indices will have shape [num_envs, num_steps],
-            # and the input tensordict will have batch shape [num_envs, num_steps].
-            # The action tensor inside this tensordict will have shape [num_envs, num_steps, num_agents, num_action_features].
+            # will have batch shape [num_envs] and action tensor shape [num_envs, num_steps, num_agents, num_action_features].
 
             # Let's check the shape of the action tensor in the input tensordict directly.
             # The input tensordict has batch_size matching the original batch_shape of data_indices.
@@ -807,95 +792,92 @@ class AnFuelpriceEnv(EnvBase):
 
 
             if valid_indices_flat.numel() > 0 and actions_tensor_flat is not None:
-                # Select the relevant slices from the flattened actions tensor using valid_indices_flat
-                actions_tensor_valid_flat = actions_tensor_flat[valid_indices_flat].contiguous() # Shape [num_valid_flat, num_agents, num_action_features]
-                print(f"Debug: Action tensor shape after flattening and slicing: {actions_tensor_valid_flat.shape}")
+                try:
+                    # Select the relevant slices from the flattened actions tensor using valid_indices_flat
+                    actions_tensor_valid_flat = actions_tensor_flat[valid_indices_flat].contiguous() # Shape [num_valid_flat, num_agents, num_action_features]
+                    print(f"Debug: Action tensor shape after flattening and slicing: {actions_tensor_valid_flat.shape}")
 
 
-                # The action tensor now has shape [num_valid_flat, num_agents, num_action_features].
-                # We need to calculate the reward for each agent based on their specific action features.
-                # The returns_data_valid_flat has shape [num_valid_flat, 13] (returns for 13 agents).
-                # We need to compare the action features for each agent against their corresponding return.
+                    # The action tensor now has shape [num_valid_flat, num_agents, num_action_features].
+                    # We need to calculate the reward for each agent based on their specific action features.
+                    # The returns_data_valid_flat has shape [num_valid_flat, 13] (returns for 13 agents).
+                    # We need to compare the action features for each agent against their corresponding return.
 
-                # Let's assume for simplicity that the first action feature (index 0) determines the 'down', 'hold', 'up' action.
-                # If your action features have a different meaning, this logic needs adjustment.
-                # Assuming actions_tensor_valid_flat[:, :, 0] is the 'down' (0), 'hold' (1), 'up' (2) action for each agent.
-                # This assumes the MultiCategorical output [num_agents, 13] means each of the 13 values is an independent action (0, 1, or 2) for that agent.
-                # If the 13 values define a single complex action per agent, the reward logic needs to be more complex.
+                    # Let's assume for simplicity that the first action feature (index 0) determines the 'down', 'hold', 'up' action.
+                    # If your action features have a different meaning, this logic needs adjustment.
+                    # Assuming actions_tensor_valid_flat[:, :, 0] is the 'down' (0), 'hold' (1), 'up' (2) action for each agent.
+                    # This assumes the MultiCategorical output [num_agents, 13] means each of the 13 values is an independent action (0, 1, or 2) for that agent.
+                    # If the 13 values define a single complex action per agent, the reward logic needs to be more complex.
 
-                # Based on the MultiCategorical definition (nvec with 13 elements, each 3 categories),
-                # it seems each agent has 13 independent categorical actions with 3 choices each.
-                # The reward should then be a function of the returns for each agent and all 13 of their chosen action features.
-                # This requires a more complex reward calculation than the simple 'down/hold/up' based on returns.
+                    # Based on the MultiCategorical definition (nvec with 13 elements, each 3 categories),
+                    # it seems each agent has 13 independent categorical actions with 3 choices each.
+                    # The reward should then be a function of the returns for each agent and all 13 of their chosen action features.
+                    # This requires a more complex reward calculation than the simple 'down/hold/up' based on returns.
 
-                # Let's revisit the action space definition.
-                # self.num_individual_actions_features = 13
-                # nvec_tensor = torch.tensor([self.num_individual_actions] * self.num_individual_actions_features, ...)
-                # agent_action_spec = MultiCategorical(nvec=nvec_tensor, shape=torch.Size([self.num_individual_actions_features,]), ...)
-                # self.action_spec_unbatched = Composite({("agents","action"): MultiCategorical(nvec=nvec_unbatched, shape=torch.Size([self.num_agents, self.num_individual_actions_features])), ...})
-                # This means for an unbatched env, the action is a TensorDict with key ('agents', 'action') holding a tensor of shape [num_agents, 13] where each element is an integer from 0 to 2.
+                    # Let's revisit the action space definition.
+                    # self.num_individual_actions_features = 13
+                    # nvec_tensor = torch.tensor([self.num_individual_actions] * self.num_individual_actions_features, ...)
+                    # agent_action_spec = MultiCategorical(nvec=nvec_tensor, shape=torch.Size([self.num_individual_actions_features,]), ...)
+                    # self.action_spec_unbatched = Composite({("agents","action"): MultiCategorical(nvec=nvec_unbatched, shape=torch.Size([self.num_agents, self.num_individual_actions_features])), ...})
+                    # This means for an unbatched env, the action is a TensorDict with key ('agents', 'action') holding a tensor of shape [num_agents, 13] where each element is an integer from 0 to 2.
 
-                # So, actions_tensor_valid_flat shape should be [num_valid_flat, num_agents, num_action_features] = [num_valid_flat, 13, 13].
-                # The reward calculation needs to use the returns_data_valid_flat [num_valid_flat, 13] and actions_tensor_valid_flat [num_valid_flat, 13, 13].
+                    # So, actions_tensor_valid_flat shape should be [num_valid_flat, num_agents, num_action_features] = [num_valid_flat, 13, 13].
+                    # The reward calculation needs to use the returns_data_valid_flat [num_valid_flat, 13] and actions_tensor_valid_flat [num_valid_flat, 13, 13].
 
-                # Let's assume for the reward calculation that each of the 13 action features for an agent corresponds to
-                # whether they are taking a 'down', 'hold', or 'up' stance with respect to one of the 13 return features.
-                # This is a possible interpretation, but the exact reward logic depends on the intended meaning of the 13 action features.
+                    # Let's assume for the reward calculation that each of the 13 action features for an agent corresponds to
+                    # whether they are taking a 'down', 'hold', or 'up' stance with respect to one of the 13 return features.
+                    # This is a possible interpretation, but the exact reward logic depends on the intended meaning of the 13 action features.
 
-                # For simplicity, let's calculate a reward for each agent by comparing *each* of their 13 action features
-                # to the corresponding 13 return values for that step.
+                    # For simplicity, let's calculate a reward for each agent by comparing *each* of their 13 action features
+                    # to the corresponding 13 return values for that step.
 
-                # returns_data_valid_flat shape: [num_valid_flat, 13] (returns for 13 agents)
-                # actions_tensor_valid_flat shape: [num_valid_flat, 13, 13] (actions for 13 agents, each with 13 features)
+                    # returns_data_valid_flat shape: [num_valid_flat, 13] (returns for 13 agents)
+                    # actions_tensor_valid_flat shape: [num_valid_flat, 13, 13] (actions for 13 agents, each with 13 features)
 
-                # We need to compare actions_tensor_valid_flat[:, j, i] with returns_data_valid_flat[:, i]
-                # for each agent j (0 to 12) and each action feature/return i (0 to 12).
+                    # We need to compare actions_tensor_valid_flat[:, j, i] with returns_data_valid_flat[:, i]
+                    # for each agent j (0 to 12) and each action feature/return i (0 to 12).
 
-                # Reshape returns_data_valid_flat for broadcasting: [num_valid_flat, 1, 13]
-                returns_broadcastable = returns_data_valid_flat.unsqueeze(1)
+                    # Reshape returns_data_valid_flat for broadcasting: [num_valid_flat, 1, 13]
+                    returns_broadcastable = returns_data_valid_flat.unsqueeze(1)
 
-                # Create masks based on the actions [num_valid_flat, num_agents, num_action_features]
-                down_mask_valid_flat = (actions_tensor_valid_flat == 0)
-                up_mask_valid_flat = (actions_tensor_valid_flat == 2)
-                hold_mask_valid_flat = (actions_tensor_valid_flat == 1)
+                    # Create masks based on the actions [num_valid_flat, num_agents, num_action_features]
+                    down_mask_valid_flat = (actions_tensor_valid_flat == 0)
+                    up_mask_valid_flat = (actions_tensor_valid_flat == 2)
+                    hold_mask_valid_flat = (actions_tensor_valid_flat == 1)
 
-                # Calculate rewards for each action feature comparison [num_valid_flat, num_agents, num_action_features]
-                # If action feature i for agent j is 'down' (0), reward contribution is -returns_data_valid_flat[:, i]
-                # If action feature i for agent j is 'up' (2), reward contribution is +returns_data_valid_flat[:, i]
-                # If action feature i for agent j is 'hold' (1), reward contribution is -0.01 * torch.abs(returns_data_valid_flat[:, i])
+                    # Calculate rewards for each action feature comparison [num_valid_flat, num_agents, num_action_features]
+                    # If action feature i for agent j is 'down' (0), reward contribution is -returns_data_valid_flat[:, i]
+                    # If action feature i for agent j is 'up' (2), reward contribution is +returns_data_valid_flat[:, i]
+                    # If action feature i for agent j is 'hold' (1), reward contribution is -0.01 * torch.abs(returns_data_valid_flat[:, i])
 
-                # We need to broadcast returns_data_valid_flat [num_valid_flat, 13] to [num_valid_flat, num_agents, 13]
-                # by repeating along the agent dimension.
-                returns_repeated = returns_data_valid_flat.unsqueeze(1).repeat(1, num_agents, 1) # Shape [num_valid_flat, num_agents, 13]
-
-
-                reward_contributions_down = -returns_repeated * down_mask_valid_flat.float()
-                reward_contributions_up = returns_repeated * up_mask_valid_flat.float()
-                reward_contributions_hold = -0.01 * torch.abs(returns_repeated) * hold_mask_valid_flat.float()
-
-                # Sum the reward contributions across the action features dimension for each agent
-                agent_rewards_valid_flat = (reward_contributions_down + reward_contributions_up + reward_contributions_hold).sum(dim=-1) # Shape [num_valid_flat, num_agents]
+                    # We need to broadcast returns_data_valid_flat [num_valid_flat, 13] to [num_valid_flat, num_agents, 13]
+                    # by repeating along the agent dimension.
+                    returns_repeated = returns_data_valid_flat.unsqueeze(1).repeat(1, num_agents, 1) # Shape [num_valid_flat, num_agents, 13]
 
 
-                # Add the last dimension to match the expected output shape [flat_batch_size, num_agents, 1]
-                agent_rewards_valid_flat = agent_rewards_valid_flat.unsqueeze(-1) # Shape [num_valid_flat, num_agents, 1]
+                    reward_contributions_down = -returns_repeated * down_mask_valid_flat.float()
+                    reward_contributions_up = returns_repeated * up_mask_valid_flat.float()
+                    reward_contributions_hold = -0.01 * torch.abs(returns_repeated) * hold_mask_valid_flat.float()
 
-                # Assign calculated rewards to the selected slice of the rewards_flat tensor
-                rewards_flat[valid_indices_flat] = agent_rewards_valid_flat # Assign to the slice
+                    # Sum the reward contributions across the action features dimension for each agent
+                    agent_rewards_valid_flat = (reward_contributions_down + reward_contributions_up + reward_contributions_hold).sum(dim=-1) # Shape [num_valid_flat, num_agents]
 
 
-            try:
-                 # Removed the old action extraction and processing logic
-                 pass # The new logic is above
+                    # Add the last dimension to match the expected output shape [flat_batch_size, num_agents, 1]
+                    agent_rewards_valid_flat = agent_rewards_valid_flat.unsqueeze(-1) # Shape [num_valid_flat, num_agents, 1]
 
-            except KeyError:
-                 print("Error: Action key ('agents', 'action') not found in the input tensordict to _batch_reward.")
-                 # Keep the corresponding slices in rewards_flat as zeros (initialized)
-                 pass
-            except Exception as e:
-                 print(f"An error occurred during reward calculation in _batch_reward: {e}")
-                 # Keep the corresponding slices in rewards_flat as zeros (initialized)
-                 pass
+                    # Assign calculated rewards to the selected slice of the rewards_flat tensor
+                    rewards_flat[valid_indices_flat] = agent_rewards_valid_flat # Assign to the slice
+
+
+                except KeyError:
+                     print("Error: Action key ('agents', 'action') not found in the input tensordict to _batch_reward.")
+                     # Keep the corresponding slices in rewards_flat as zeros (initialized)
+                     pass
+                except Exception as e:
+                     print(f"An error occurred during reward calculation in _batch_reward: {e}")
+                     # Keep the corresponding slices in rewards_flat as zeros (initialized)
+                     pass
 
 
         # Reshape rewards_flat back to the original input batch size [num_envs, num_steps, num_agents, 1] or [num_envs, num_agents, 1]
