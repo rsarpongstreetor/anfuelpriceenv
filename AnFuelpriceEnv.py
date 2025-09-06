@@ -177,8 +177,8 @@ class FuelpriceenvfeatureGraph():
             # Calculate observation bounds after loading data and moving to device
             obs_dim = 13 # Define obs_dim here
             # Use self.num_nodes_per_graph which is now an attribute of FuelpriceenvfeatureGraph
-            self.obs_min = torch.min(self.combined_data[:, :self.num_nodes_per_graph], dim=0)[0].unsqueeze(-1).to(self.device)
-            self.obs_max = torch.max(self.combined_data[:, :self.num_nodes_per_graph], dim=0)[0].unsqueeze(-1).to(self.device)
+            self.obs_min = torch.min(self.combined_data[:, :self.num_nodes_per_graph], dim=0)[0].unsqueeze(-1).to(self.device) # Corrected slicing
+            self.obs_max = torch.max(self.combined_data[:, :self.num_nodes_per_graph], dim=0)[0].unsqueeze(-1).to(self.device) # Corrected slicing
 
 
         except Exception as e:
@@ -188,7 +188,7 @@ class FuelpriceenvfeatureGraph():
 
 
 class AnFuelpriceEnv(EnvBase):
-    def __init__(self, num_envs, device, seed, **kwargs):
+    def __init__(self, num_envs, seed, device, **kwargs):
         self.episode_length = kwargs.get('episode_length', 100)
         self.num_agents = 13 # Keep as 13 based on original definition and feature count
         self.allow_repeat_data = kwargs.get('allow_repeat_data', False)
@@ -204,7 +204,7 @@ class AnFuelpriceEnv(EnvBase):
 
         self.graph_generator.device = self.device
         self.graph_generator.allow_repeat_data = self.allow_repeat_data
-        
+
         self.graph_generator._load_data()
         self.combined_data = self.graph_generator.combined_data
 
@@ -654,6 +654,24 @@ class AnFuelpriceEnv(EnvBase):
                      # Keep the corresponding slices in batches as zeros (initialized)
                      pass # Continue to the next environment
 
+         # --- Debugging prints for batched tensors after loop and before TensorDict construction ---
+         print("\n--- Debugging batched tensors in _get_state_at (after loop) ---")
+         print(f"Type of x_batch: {type(x_batch)}, Is None: {x_batch is None}")
+         if x_batch is not None:
+             print(f"x_batch shape: {x_batch.shape}, dtype: {x_batch.dtype}")
+             print(f"x_batch sample (first 5 elements): {x_batch.flatten()[:5]}...")
+         print(f"Type of edge_index_batch: {type(edge_index_batch)}, Is None: {edge_index_batch is None}")
+         if edge_index_batch is not None:
+              print(f"edge_index_batch shape: {edge_index_batch.shape}, dtype: {edge_index_batch.dtype}")
+              print(f"edge_index_batch sample (first 5 elements): {edge_index_batch.flatten()[:5]}...")
+         print(f"Type of graph_attributes_batch: {type(graph_attributes_batch)}, Is None: {graph_attributes_batch is None}")
+         if graph_attributes_batch is not None:
+              print(f"graph_attributes_batch shape: {graph_attributes_batch.shape}, dtype: {graph_attributes_batch.dtype}")
+              print(f"graph_attributes_batch sample (first 5 elements): {graph_attributes_batch.flatten()[:5]}...")
+         print("-------------------------------------------------------------")
+         # -----------------------------------------------------------------------
+
+
          # Construct the output TensorDict for state at the current data index
          state_tensordict = TensorDict({
              ("agents", "observation"): TensorDict({
@@ -692,7 +710,7 @@ class AnFuelpriceEnv(EnvBase):
          if ("agents", "terminated") in state_tensordict.keys(include_nested=True):
              print(f"  ('agents', 'terminated') value: {state_tensordict.get(('agents', 'terminated'))}")
          if ("agents", "truncated") in state_tensordict.keys(include_nested=True):
-             print(f"  ('agents', 'truncated') value: {state_tensordict.get(('agents', 'truncated'))}")
+             print(f"  ('truncated') value: {next_state_tensordict.get(('agents', 'truncated'))}")
 
          print("-------------------------------------------")
 
@@ -713,7 +731,7 @@ class AnFuelpriceEnv(EnvBase):
 
     def _batch_reward(self, data_indices: torch.Tensor, tensordict: TensorDict) -> TensorDict: # Changed actions type hint to TensorDict
         # data_indices shape: [num_envs] or [num_envs, num_steps]
-        # tensordict is the input tensordict to _step, expected to contain actions under ('agents', 'action')
+        # tensordict is the input tensordict passed to step() by the collector
 
         # Determine the flat batch size based on data_indices batch size
         original_batch_shape = data_indices.shape
@@ -756,17 +774,6 @@ class AnFuelpriceEnv(EnvBase):
             # The input tensordict's batch size will match the batch size of data_indices,
             # which can be [num_envs] for a single step or [num_envs, num_steps] for a rollout.
             # We need to flatten the input tensordict to match the flat_batch_size of data_indices_flat.
-
-            # View the input tensordict to have batch size [flat_batch_size]
-            # The total number of elements in the batch dimensions of the input tensordict
-            # should match flat_batch_size.
-            # We need to figure out the remaining dimensions after flattening the batch.
-            # The action should have shape [num_envs, ..., num_agents, num_action_features]
-            # When passed to _step (and _batch_reward), the batch shape could be [num_envs] or [num_envs, num_steps].
-            # The action tensor inside the input tensordict to _step will have batch shape [num_envs]
-            # and action tensor shape [num_agents, num_action_features].
-            # The action tensor inside the tensordict passed to _batch_reward (which is the same tensordict from _step)
-            # will have batch shape [num_envs] and action tensor shape [num_envs, num_steps, num_agents, num_action_features].
 
             # Let's check the shape of the action tensor in the input tensordict directly.
             # The input tensordict has batch_size matching the original batch_shape of data_indices.
