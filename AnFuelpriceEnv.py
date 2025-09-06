@@ -710,7 +710,8 @@ class AnFuelpriceEnv(EnvBase):
          if ("agents", "terminated") in state_tensordict.keys(include_nested=True):
              print(f"  ('agents', 'terminated') value: {state_tensordict.get(('agents', 'terminated'))}")
          if ("agents", "truncated") in state_tensordict.keys(include_nested=True):
-             print(f"  ('truncated') value: {next_state_tensordict.get(('agents', 'truncated'))}")
+             # Fix: Use state_tensordict instead of next_state_tensordict
+             print(f"  ('agents', 'truncated') value: {state_tensordict.get(('agents', 'truncated'))}")
 
          print("-------------------------------------------")
 
