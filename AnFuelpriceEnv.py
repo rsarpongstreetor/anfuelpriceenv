@@ -268,6 +268,12 @@ class AnFuelpriceEnv(EnvBase):
                           dtype=torch.float32,
                           device=self.device
                      ),
+                      # Add 'batch' key to the observation spec
+                     "batch": Unbounded( # Batch tensor [num_envs, num_nodes_per_graph]
+                         shape=torch.Size([self.num_envs, self.num_nodes_per_graph]),
+                         dtype=torch.int64,
+                         device=self.device
+                     ),
                  }),
                  # Removed global_reward_in_state from state_spec
                  # Added top-level done, terminated, truncated keys for the current state
@@ -303,6 +309,12 @@ class AnFuelpriceEnv(EnvBase):
                                shape=torch.Size([self.num_envs, (26-13) + (39-26)]), # Assuming this is the graph attr dim
                                dtype=torch.float32,
                                device=self.device
+                          ),
+                           # Add 'batch' key to the next observation spec
+                          "batch": Unbounded( # Batch tensor [num_envs, num_nodes_per_graph]
+                              shape=torch.Size([self.num_envs, self.num_nodes_per_graph]),
+                              dtype=torch.int64,
+                              device=self.device
                           ),
                       }),
                       # Removed global_reward_in_state from next state spec
@@ -481,6 +493,13 @@ class AnFuelpriceEnv(EnvBase):
         next_state_tensordict.set(("agents", "truncated"), truncated.unsqueeze(-1))
         next_state_tensordict.set(("agents", "done"), terminated.unsqueeze(-1) | truncated.unsqueeze(-1))
 
+        # Add the batch key to the next observation
+        # Create a batch tensor for the next state
+        # The batch tensor should map each node to its environment index.
+        # Shape: [num_envs, num_nodes_per_graph]
+        batch_tensor = torch.arange(self.num_envs, device=self.device).unsqueeze(-1).repeat(1, self.num_nodes_per_graph)
+        next_state_tensordict.get(("agents", "observation"))["batch"] = batch_tensor
+
 
         # Debugging print to check observation keys and reward before returning
         print("\n--- Environment _step output tensordict (before return) ---")
@@ -508,6 +527,10 @@ class AnFuelpriceEnv(EnvBase):
              print(f"  ('agents', 'terminated') value: {next_state_tensordict.get(('agents', 'terminated'))}")
         if ("agents", "truncated") in next_state_tensordict.keys(include_nested=True):
              print(f"  ('agents', 'truncated') value: {next_state_tensordict.get(('agents', 'truncated'))}")
+        # Print batch key to verify its location
+        if ('agents', 'observation', 'batch') in next_state_tensordict.keys(include_nested=True):
+             print(f"  ('agents', 'observation', 'batch') value sample: {next_state_tensordict.get(('agents', 'observation', 'batch'))[0][:5]}...") # Print sample of batch tensor
+
 
         print("-------------------------------------------")
 
@@ -548,15 +571,41 @@ class AnFuelpriceEnv(EnvBase):
         initial_tensordict.set(("agents", "done"), torch.zeros(self.num_envs, 1, dtype=torch.bool, device=self.device))
         # 'temp_reward' is not needed in the initial tensordict
 
+        # Add the batch key to the initial observation
+        # Create a batch tensor for the initial state
+        # The batch tensor should map each node to its environment index.
+        # Shape: [num_envs, num_nodes_per_graph]
+        batch_tensor = torch.arange(self.num_envs, device=self.device).unsqueeze(-1).repeat(1, self.num_nodes_per_graph)
+        initial_tensordict.get(("agents", "observation"))["batch"] = batch_tensor
+
 
         # Debugging print to check observation keys before returning
-        # print("\n--- Environment _reset output tensordict ---")
-        # print(f"Output tensordict keys: {initial_tensordict.keys(include_nested=True)}") # Added include_nested=True
-        # # Also print keys of nested observation tensordict
-        # if ("agents", "observation") in initial_tensordict.keys(include_nested=True): # Added include_nested=True
-        #      print(f"  Nested ('agents', 'observation') keys: {initial_tensordict.get(('agents', 'observation')).keys(include_nested=True)}") # Added include_nested=True
-        # print(f"  Nested ('agents', 'observation') shape: {initial_tensordict.get(('agents', 'observation')).shape}")
-        # print("-------------------------------------------")
+        print("\n--- Environment _reset output tensordict ---")
+        print(f"Output tensordict keys: {initial_tensordict.keys(include_nested=True)}") # Added include_nested=True
+        # Also print keys of nested observation tensordict
+        if ("agents", "observation") in initial_tensordict.keys(include_nested=True): # Added include_nested=True
+             print(f"  Nested ('agents', 'observation') keys: {initial_tensordict.get(('agents', 'observation')).keys(include_nested=True)}") # Added include_nested=True
+             print(f"  Nested ('agents', 'observation') shape: {initial_tensordict.get(('agents', 'observation')).shape}")
+        # Print done keys to verify their location
+        if ("done") in initial_tensordict.keys():
+             print(f"  ('done') value: {initial_tensordict.get(('done'))}")
+        if ("terminated") in initial_tensordict.keys():
+             print(f"  ('terminated') value: {initial_tensordict.get(('terminated'))}")
+        if ("truncated") in initial_tensordict.keys():
+             print(f"  ('truncated') value: {initial_tensordict.get(('truncated'))}")
+        if ("agents", "done") in initial_tensordict.keys(include_nested=True):
+             print(f"  ('agents', 'done') value: {initial_tensordict.get(('agents', 'done'))}")
+        if ("agents", "terminated") in initial_tensordict.keys(include_nested=True):
+             print(f"  ('agents', 'terminated') value: {initial_tensordict.get(('agents', 'terminated'))}")
+        if ("agents", "truncated") in initial_tensordict.keys(include_nested=True):
+             # Fix: Use state_tensordict instead of next_state_tensordict
+             print(f"  ('agents', 'truncated') value: {initial_tensordict.get(('agents', 'truncated'))}")
+        # Print batch key to verify its location
+        if ('agents', 'observation', 'batch') in initial_tensordict.keys(include_nested=True):
+             print(f"  ('agents', 'observation', 'batch') value sample: {initial_tensordict.get(('agents', 'observation', 'batch'))[0][:5]}...") # Print sample of batch tensor
+
+
+        print("-------------------------------------------")
 
 
         return initial_tensordict
@@ -678,6 +727,10 @@ class AnFuelpriceEnv(EnvBase):
                   "x": x_batch,
                   "edge_index": edge_index_batch,
                   "graph_attributes": graph_attributes_batch,
+                  # Add 'batch' key here
+                  # Create a batch tensor that maps nodes to environments
+                  # Shape: [num_envs_subset, num_nodes_per_graph]
+                  "batch": torch.arange(num_envs_subset, device=self.device).unsqueeze(-1).repeat(1, num_nodes_per_graph),
              }, batch_size=[num_envs_subset], device=self.device),
              # Removed global_reward_in_state from state tensordict construction
              # Added top-level done, terminated, truncated keys
@@ -712,6 +765,10 @@ class AnFuelpriceEnv(EnvBase):
          if ("agents", "truncated") in state_tensordict.keys(include_nested=True):
              # Fix: Use state_tensordict instead of next_state_tensordict
              print(f"  ('agents', 'truncated') value: {state_tensordict.get(('agents', 'truncated'))}")
+         # Print batch key to verify its location
+         if ('agents', 'observation', 'batch') in state_tensordict.keys(include_nested=True):
+             print(f"  ('agents', 'observation', 'batch') value sample: {state_tensordict.get(('agents', 'observation', 'batch'))[0][:5]}...") # Print sample of batch tensor
+
 
          print("-------------------------------------------")
 
@@ -821,20 +878,6 @@ class AnFuelpriceEnv(EnvBase):
                     # it seems each agent has 13 independent categorical actions with 3 choices each.
                     # The reward should then be a function of the returns for each agent and all 13 of their chosen action features.
                     # This requires a more complex reward calculation than the simple 'down/hold/up' based on returns.
-
-                    # Let's revisit the action space definition.
-                    # self.num_individual_actions_features = 13
-                    # nvec_tensor = torch.tensor([self.num_individual_actions] * self.num_individual_actions_features, ...)
-                    # agent_action_spec = MultiCategorical(nvec=nvec_tensor, shape=torch.Size([self.num_individual_actions_features,]), ...)
-                    # self.action_spec_unbatched = Composite({("agents","action"): MultiCategorical(nvec=nvec_unbatched, shape=torch.Size([self.num_agents, self.num_individual_actions_features])), ...})
-                    # This means for an unbatched env, the action is a TensorDict with key ('agents', 'action') holding a tensor of shape [num_agents, 13] where each element is an integer from 0 to 2.
-
-                    # So, actions_tensor_valid_flat shape should be [num_valid_flat, num_agents, num_action_features] = [num_valid_flat, 13, 13].
-                    # The reward calculation needs to use the returns_data_valid_flat [num_valid_flat, 13] and actions_tensor_valid_flat [num_valid_flat, 13, 13].
-
-                    # Let's assume for the reward calculation that each of the 13 action features for an agent corresponds to
-                    # whether they are taking a 'down', 'hold', or 'up' stance with respect to one of the 13 return features.
-                    # This is a possible interpretation, but the exact reward logic depends on the intended meaning of the 13 action features.
 
                     # For simplicity, let's calculate a reward for each agent by comparing *each* of their 13 action features
                     # to the corresponding 13 return values for that step.
