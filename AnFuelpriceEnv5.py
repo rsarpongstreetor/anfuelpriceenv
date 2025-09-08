@@ -228,7 +228,7 @@ class AnFuelpriceEnv(EnvBase):
         # If each agent's node features are these 13 values, then node_feature_dim is 13.
         # Assuming node feature dim is 1, as in the original code, but this might need revisit
         # if each agent node represents one of the 13 features.
-        # Let's keep it as 1 for now, assuming each node feature is one value from the 13 columns.
+        # Let's keep it as 1 for now, assuming each node feature is a single value from the 13 columns.
         self.node_feature_dim = 1 # Changed to 1 assuming each node feature is a single value from the first 13 columns
 
         # Define obs_dim before using it
@@ -286,19 +286,19 @@ class AnFuelpriceEnv(EnvBase):
                  }),
                  # Removed global_reward_in_state from state_spec
                  # Added top-level done, terminated, truncated keys for the current state
-                 "done": Categorical(
-                      n=2,
-                      shape=torch.Size([self.num_envs, 1]),
+                 "done": Categorical(n=2, # Added n=2 back
+                      # shape=torch.Size([self.num_envs, 1]), # Corrected shape
+                      shape=torch.Size([self.num_envs]), # Corrected shape
                       dtype=torch.bool,
                       device=self.device),
-                 "terminated": Categorical(
-                      n=2,
-                      shape=torch.Size([self.num_envs, 1]),
+                 "terminated": Categorical(n=2, # Added n=2 back
+                      # shape=torch.Size([self.num_envs, 1]), # Corrected shape
+                      shape=torch.Size([self.num_envs]), # Corrected shape
                       dtype=torch.bool,
                       device=self.device),
-                 "truncated": Categorical(
-                      n=2,
-                      shape=torch.Size([self.num_envs, 1]),
+                 "truncated": Categorical(n=2, # Added n=2 back
+                      # shape=torch.Size([self.num_envs, 1]), # Corrected shape
+                      shape=torch.Size([self.num_envs]), # Corrected shape
                       dtype=torch.bool,
                       device=self.device),
                  # Define the keys for the next state, nested under "next"
@@ -331,35 +331,35 @@ class AnFuelpriceEnv(EnvBase):
                       # Also include reward key under ('agents',) under 'next'
                       ('agents', 'reward'): Unbounded(shape=torch.Size([self.num_envs, self.num_agents, 1]), dtype=torch.float32, device=self.device),
                        # done, terminated, truncated keys under ('agents',) under 'next'
-                       ("agents", "terminated"): Categorical(
-                            n=2,
-                            shape=torch.Size([self.num_envs, 1]), # Shape should be [num_envs, 1] as done/terminated/truncated are per env
+                       ("agents", "terminated"): Categorical(n=2, # Added n=2 back
+                            # shape=torch.Size([self.num_envs, 1]), # Shape should be [num_envs, 1] as done/terminated/truncated are per env
+                            shape=torch.Size([self.num_envs]), # Corrected shape
                             dtype=torch.bool,
                             device=self.device),
-                       ("agents", "truncated"):  Categorical(
-                            n=2,
-                            shape=torch.Size([self.num_envs, 1]), # Shape should be [num_envs, 1]
+                       ("agents", "truncated"):  Categorical(n=2, # Added n=2 back
+                            # shape=torch.Size([self.num_envs, 1]), # Shape should be [num_envs, 1]
+                            shape=torch.Size([self.num_envs]), # Corrected shape
                              dtype=torch.bool,
                              device=self.device),
-                       ("agents", "done"):  Categorical(
-                            n=2,
-                            shape=torch.Size([self.num_envs, 1]), # Shape should be [num_envs, 1]
+                       ("agents", "done"):  Categorical(n=2, # Added n=2 back
+                            # shape=torch.Size([self.num_envs, 1]), # Shape should be [num_envs, 1]
+                            shape=torch.Size([self.num_envs]), # Corrected shape
                              dtype=torch.bool,
                              device=self.device),
                      # Add top-level done, terminated, truncated keys to the "next" composite
-                     "done": Categorical(
-                          n=2,
-                          shape=torch.Size([self.num_envs, 1]),
+                     "done": Categorical(n=2, # Added n=2 back
+                          # shape=torch.Size([self.num_envs, 1]), # Corrected shape
+                          shape=torch.Size([self.num_envs]), # Corrected shape
                           dtype=torch.bool,
                           device=self.device),
-                     "terminated": Categorical(
-                          n=2,
-                          shape=torch.Size([self.num_envs, 1]),
+                     "terminated": Categorical(n=2, # Added n=2 back
+                          # shape=torch.Size([self.num_envs, 1]), # Corrected shape
+                          shape=torch.Size([self.num_envs]), # Corrected shape
                           dtype=torch.bool,
                           device=self.device),
-                     "truncated": Categorical(
-                          n=2,
-                          shape=torch.Size([self.num_envs, 1]),
+                     "truncated": Categorical(n=2, # Added n=2 back
+                          # shape=torch.Size([self.num_envs, 1]), # Corrected shape
+                          shape=torch.Size([self.num_envs]), # Corrected shape
                           dtype=torch.bool,
                           device=self.device),
                  }),
@@ -430,36 +430,36 @@ class AnFuelpriceEnv(EnvBase):
         # Moved done, terminated, truncated to the top level of done_spec
         self.done_spec = Composite(
             {
-                ("agents", "done"):  Categorical(
-                      n=2,
-                      shape=torch.Size([self.num_envs, 1]), # Shape should be [num_envs, 1]
+                ("agents", "done"):  Categorical(n=2, # Added n=2 back
+                      # shape=torch.Size([self.num_envs, 1]), # Shape should be [num_envs, 1]
+                      shape=torch.Size([self.num_envs]), # Corrected shape
                       dtype=torch.bool,
                       device=self.device),
 
-                ("agents", "terminated"): Categorical(
-                      n=2,
-                      shape=torch.Size([self.num_envs, 1]), # Shape should be [num_envs, 1]
+                ("agents", "terminated"): Categorical(n=2, # Added n=2 back
+                      # shape=torch.Size([self.num_envs, 1]), # Shape should be [num_envs, 1]
+                      shape=torch.Size([self.num_envs]), # Corrected shape
                       dtype=torch.bool,
                       device=self.device),
-                ("agents", "truncated"):  Categorical(
-                     n=2,
-                     shape=torch.Size([self.num_envs, 1]), # Shape should be [num_envs, 1]
+                ("agents", "truncated"):  Categorical(n=2, # Added n=2 back
+                     # shape=torch.Size([self.num_envs, 1]), # Shape should be [num_envs, 1]
+                     shape=torch.Size([self.num_envs]), # Corrected shape
                       dtype=torch.bool,
                       device=self.device),
                 # Add top-level done, terminated, truncated keys to done_spec
-                "done": Categorical(
-                     n=2,
-                     shape=torch.Size([self.num_envs, 1]),
+                "done": Categorical(n=2, # Added n=2 back
+                     # shape=torch.Size([self.num_envs, 1]), # Corrected shape
+                     shape=torch.Size([self.num_envs]), # Corrected shape
                      dtype=torch.bool,
                      device=self.device),
-                "terminated": Categorical(
-                     n=2,
-                     shape=torch.Size([self.num_envs, 1]),
+                "terminated": Categorical(n=2, # Added n=2 back
+                     # shape=torch.Size([self.num_envs, 1]), # Corrected shape
+                     shape=torch.Size([self.num_envs]), # Corrected shape
                      dtype=torch.bool,
                      device=self.device),
-                "truncated": Categorical(
-                     n=2,
-                     shape=torch.Size([self.num_envs, 1]),
+                "truncated": Categorical(n=2, # Added n=2 back
+                     # shape=torch.Size([self.num_envs, 1]), # Corrected shape
+                     shape=torch.Size([self.num_envs]), # Corrected shape
                      dtype=torch.bool,
                      device=self.device),
             },
@@ -496,12 +496,13 @@ class AnFuelpriceEnv(EnvBase):
         # These keys should be at the root level of the tensordict returned by _step
         next_state_tensordict.set(('agents', 'reward'), reward_td.get(('agents', 'reward')))
         # Set done, terminated, truncated at the top level AND under ('agents',)
-        next_state_tensordict.set("terminated", terminated.unsqueeze(-1))
-        next_state_tensordict.set("truncated", truncated.unsqueeze(-1))
-        next_state_tensordict.set("done", terminated.unsqueeze(-1) | truncated.unsqueeze(-1))
-        next_state_tensordict.set(("agents", "terminated"), terminated.unsqueeze(-1))
-        next_state_tensordict.set(("agents", "truncated"), truncated.unsqueeze(-1))
-        next_state_tensordict.set(("agents", "done"), terminated.unsqueeze(-1) | truncated.unsqueeze(-1))
+        # Corrected shapes for done, terminated, truncated
+        next_state_tensordict.set("terminated", terminated.unsqueeze(-1)) # Keep unsqueeze for shape [num_envs, 1] for compatibility?
+        next_state_tensordict.set("truncated", truncated.unsqueeze(-1)) # Keep unsqueeze for shape [num_envs, 1]
+        next_state_tensordict.set("done", (terminated | truncated).unsqueeze(-1)) # Keep unsqueeze for shape [num_envs, 1]
+        next_state_tensordict.set(("agents", "terminated"), terminated.unsqueeze(-1)) # Keep unsqueeze for shape [num_envs, 1]
+        next_state_tensordict.set(("agents", "truncated"), truncated.unsqueeze(-1)) # Keep unsqueeze for shape [num_envs, 1]
+        next_state_tensordict.set(("agents", "done"), (terminated | truncated).unsqueeze(-1)) # Keep unsqueeze for shape [num_envs, 1]
 
         # Add the batch key to the next observation
         # Create a batch tensor for the next state
@@ -573,12 +574,13 @@ class AnFuelpriceEnv(EnvBase):
         # It should also include the done flags initialized to False.
         initial_tensordict = initial_state_tensordict.clone() # Start with the initial state structure
         # Set done, terminated, truncated at the top level AND under ('agents',)
-        initial_tensordict.set("terminated", torch.zeros(self.num_envs, 1, dtype=torch.bool, device=self.device))
-        initial_tensordict.set("truncated", torch.zeros(self.num_envs, 1, dtype=torch.bool, device=self.device))
-        initial_tensordict.set("done", torch.zeros(self.num_envs, 1, dtype=torch.bool, device=self.device))
-        initial_tensordict.set(("agents", "terminated"), torch.zeros(self.num_envs, 1, dtype=torch.bool, device=self.device))
-        initial_tensordict.set(("agents", "truncated"), torch.zeros(self.num_envs, 1, dtype=torch.bool, device=self.device))
-        initial_tensordict.set(("agents", "done"), torch.zeros(self.num_envs, 1, dtype=torch.bool, device=self.device))
+        # Corrected shapes for done, terminated, truncated
+        initial_tensordict.set("terminated", torch.zeros(self.num_envs, 1, dtype=torch.bool, device=self.device)) # Keep unsqueeze for shape [num_envs, 1] for compatibility?
+        initial_tensordict.set("truncated", torch.zeros(self.num_envs, 1, dtype=torch.bool, device=self.device)) # Keep unsqueeze for shape [num_envs, 1]
+        initial_tensordict.set("done", torch.zeros(self.num_envs, 1, dtype=torch.bool, device=self.device)) # Keep unsqueeze for shape [num_envs, 1]
+        initial_tensordict.set(("agents", "terminated"), torch.zeros(self.num_envs, 1, dtype=torch.bool, device=self.device)) # Keep unsqueeze for shape [num_envs, 1]
+        initial_tensordict.set(("agents", "truncated"), torch.zeros(self.num_envs, 1, dtype=torch.bool, device=self.device)) # Keep unsqueeze for shape [num_envs, 1]
+        initial_tensordict.set(("agents", "done"), torch.zeros(self.num_envs, 1, dtype=torch.bool, device=self.device)) # Keep unsqueeze for shape [num_envs, 1]
         # 'temp_reward' is not needed in the initial tensordict
 
         # Add the batch key to the initial observation
@@ -620,185 +622,6 @@ class AnFuelpriceEnv(EnvBase):
 
         return initial_tensordict
 
-
-    def _get_state_at(self, env_ids: torch.Tensor) -> TensorDict:
-         if self.combined_data is None:
-              raise RuntimeError("Combined data not loaded. Ensure _load_data is called.")
-
-         num_envs_subset = len(env_ids)
-         num_agents = self.num_agents
-         num_nodes_per_graph = self.num_nodes_per_graph # This is num_agents
-         node_feature_dim = self.node_feature_dim # This is 1
-         num_edges_per_graph = self.num_edges_per_graph # Based on graph structure among agents
-         # The graph attributes dimension should be based on the data, not the number of agents.
-         # Assuming the graph attributes are columns 13 to 38 (26 columns).
-         graph_attr_dim = 26 # Assuming this is the graph attr dim based on data
-
-
-         state_data_index = self.current_data_index[env_ids]
-
-         out_of_bounds_mask = (state_data_index < 0) | (state_data_index >= self.combined_data.shape[0])
-
-         # Initialize tensors for batched data (batch size is num_envs_subset)
-         # x: [num_envs_subset, num_agents, node_feature_dim]
-         # edge_index: [num_envs_subset, 2, num_edges_per_graph]
-         # graph_attributes: [num_envs_subset, graph_attr_dim]
-         # global_reward_in_state: [num_envs_subset, num_agents, 1]
-
-         x_batch = torch.zeros(num_envs_subset, num_agents, node_feature_dim, device=self.device)
-         edge_index_batch = torch.zeros(num_envs_subset, 2, num_edges_per_graph, dtype=torch.int64, device=self.device)
-         graph_attributes_batch = torch.zeros(num_envs_subset, graph_attr_dim, device=self.device)
-         # Removed initialization of global_reward_in_state
-
-
-         for i in range(num_envs_subset):
-             env_idx_in_subset = i
-             data_index_for_env = state_data_index[env_idx_in_subset]
-
-
-             if out_of_bounds_mask[env_idx_in_subset]:
-                 # If out of bounds, keep the corresponding slices in batches as zeros (initialized)
-                 pass
-             else:
-                try:
-                     # Extract data for the current data_index
-                     data_slice = self.combined_data[data_index_for_env.item()] # Shape [39]
-
-                     # Node features (x) - Shape [num_agents, node_feature_dim] = [num_agents, 1]
-                     # Assuming the first 'num_agents' values correspond to the agents' node features.
-                     # This assumes the first 'num_agents' columns of the data are the node features.
-                     # If num_agents > 13, this will cause an index error.
-                     # We should instead use the first 13 columns, regardless of num_agents,
-                     # and potentially pad if num_agents > 13 or select a subset if num_agents < 13.
-                     # Let's assume the first 13 columns are the potential node features, and we select the first `num_agents` from these.
-                     if num_agents > 13:
-                          print(f"Warning: num_agents ({num_agents}) is greater than the number of available node features in data (13). Padding with zeros.")
-                          x = torch.zeros(num_agents, node_feature_dim, device=self.device)
-                          x[:13, :] = data_slice[0:13].unsqueeze(-1).to(self.device) # Use available data
-                     else:
-                          x = data_slice[0:num_agents].unsqueeze(-1).to(self.device) # Shape [num_agents, 1]
-
-                     x_batch[env_idx_in_subset, :, :] = x # Assign directly
-
-
-                     # Edge indices (edge_index) - Shape [2, num_edges_per_graph]
-                     # Create a fully connected graph among num_agents nodes
-                     # This generates all possible directed edges
-                     # Number of edges = num_agents * (num_agents - 1)
-                     if num_agents > 1:
-                          senders, receivers = torch.meshgrid(torch.arange(num_agents, device=self.device), torch.arange(num_agents, device=self.device), indexing='ij')
-                          edge_index = torch.stack([senders.flatten(), receivers.flatten()], dim=0)
-                          # Remove self-loops if necessary
-                          edge_index = edge_index[:, edge_index[0] != edge_index[1]]
-                          # Ensure edge_index has the expected number of edges, even if there are no self-loops
-                          # Pad if necessary (though for fully connected > 1 agent, num_edges_per_graph is fixed)
-                          if edge_index.shape[1] < num_edges_per_graph:
-                               # This case shouldn't happen for num_agents > 1 and fully connected
-                               pass # Or raise error/warning if unexpected
-                          edge_index_batch[env_idx_in_subset, :, :] = edge_index # Shape [2, num_agents * (num_agents - 1)]
-                     else:
-                          # Handle single agent case (no edges)
-                          edge_index_batch[env_idx_in_subset, :, :] = torch.empty(2, 0, dtype=torch.int64, device=self.device)
-
-
-                     # Graph attributes (graph_attributes) - Shape [graph_attr_dim]
-                     # Assuming graph attributes are columns 13 to 38 (26 columns)
-                     graph_attributes = data_slice[13:39].to(self.device) # Shape [26]
-                     # Ensure graph_attributes has the correct dimension
-                     if graph_attributes.shape[0] != graph_attr_dim:
-                          print(f"Warning: Extracted graph attributes shape {graph_attributes.shape[0]} does not match expected graph_attr_dim {graph_attr_dim}. Padding/Truncating.")
-                          if graph_attributes.shape[0] < graph_attr_dim:
-                               graph_attributes = torch.cat([graph_attributes, torch.zeros(graph_attr_dim - graph_attributes.shape[0], device=self.device)])
-                          else:
-                               graph_attributes = graph_attributes[:graph_attr_dim]
-
-                     graph_attributes_batch[env_idx_in_subset, :] = graph_attributes
-
-
-                except Exception as e:
-                     print(f"An error occurred during state data extraction for env {env_ids[i].item()} at data index {data_index_for_env.item()}: {e}")
-                     # Keep the corresponding slices in batches as zeros (initialized)
-                     pass # Continue to the next environment
-
-         # --- Debugging prints for batched tensors after loop and before TensorDict construction ---
-         print("\n--- Debugging batched tensors in _get_state_at (after loop) ---")
-         print(f"Type of x_batch: {type(x_batch)}, Is None: {x_batch is None}")
-         if x_batch is not None:
-             print(f"x_batch shape: {x_batch.shape}, dtype: {x_batch.dtype}")
-             print(f"x_batch sample (first 5 elements): {x_batch.flatten()[:5]}...")
-         print(f"Type of edge_index_batch: {type(edge_index_batch)}, Is None: {edge_index_batch is None}")
-         if edge_index_batch is not None:
-              print(f"edge_index_batch shape: {edge_index_batch.shape}, dtype: {edge_index_batch.dtype}")
-              print(f"edge_index_batch sample (first 5 elements): {edge_index_batch.flatten()[:5]}...")
-         print(f"Type of graph_attributes_batch: {type(graph_attributes_batch)}, Is None: {graph_attributes_batch is None}")
-         if graph_attributes_batch is not None:
-              print(f"graph_attributes_batch shape: {graph_attributes_batch.shape}, dtype: {graph_attributes_batch.dtype}")
-              print(f"graph_attributes_batch sample (first 5 elements): {graph_attributes_batch.flatten()[:5]}...")
-         print("-------------------------------------------------------------")
-         # -----------------------------------------------------------------------
-
-
-         # Construct the output TensorDict for state at the current data index
-         state_tensordict = TensorDict({
-             ("agents", "observation"): TensorDict({
-                  "x": x_batch,
-                  "edge_index": edge_index_batch,
-                  "graph_attributes": graph_attributes_batch,
-                  # Add 'batch' key here
-                  # Create a batch tensor that maps nodes to environments
-                  # Shape: [num_envs_subset, num_agents]
-                  "batch": torch.arange(num_envs_subset, device=self.device).unsqueeze(-1).repeat(1, num_agents),
-             }, batch_size=[num_envs_subset], device=self.device),
-             # Removed global_reward_in_state from state tensordict construction
-             # Added top-level done, terminated, truncated keys
-             "done": torch.zeros(num_envs_subset, 1, dtype=torch.bool, device=self.device),
-             "terminated": torch.zeros(num_envs_subset, 1, dtype=torch.bool, device=self.device),
-             "truncated": torch.zeros(num_envs_subset, 1, dtype=torch.bool, device=self.device),
-             # Added done, terminated, truncated keys under ('agents',) as well
-             ("agents", "done"): torch.zeros(num_envs_subset, 1, dtype=torch.bool, device=self.device),
-             ("agents", "terminated"): torch.zeros(num_envs_subset, 1, dtype=torch.bool, device=self.device),
-             ("agents", "truncated"): torch.zeros(num_envs_subset, 1, dtype=torch.bool, device=self.device),
-         }, batch_size=[num_envs_subset], device=self.device)
-
-
-         # Debugging print to check observation keys before returning
-         print("\n--- Environment _get_state_at output tensordict ---")
-         print(f"Output tensordict keys: {state_tensordict.keys(include_nested=True)}") # Added include_nested=True
-         # Also print keys of nested observation tensordict
-         if ("agents", "observation") in state_tensordict.keys(include_nested=True): # Added include_nested=True
-              print(f"  Nested ('agents', 'observation') keys: {state_tensordict.get(('agents', 'observation')).keys(include_nested=True)}") # Added include_nested=True
-         print(f"  Nested ('agents', 'observation') shape: {state_tensordict.get(('agents', 'observation')).shape}")
-         # Print done keys to verify their location
-         if ("done") in state_tensordict.keys():
-             print(f"  ('done') value: {state_tensordict.get(('done'))}")
-         if ("terminated") in state_tensordict.keys():
-             print(f"  ('terminated') value: {state_tensordict.get(('terminated'))}")
-         if ("truncated") in state_tensordict.keys():
-             print(f"  ('truncated') value: {state_tensordict.get(('truncated'))}")
-         if ("agents", "done") in state_tensordict.keys(include_nested=True):
-             print(f"  ('agents', 'done') value: {state_tensordict.get(('agents', 'done'))}")
-         if ("agents", "terminated") in state_tensordict.keys(include_nested=True):
-             print(f"  ('agents', 'terminated') value: {state_tensordict.get(('agents', 'terminated'))}")
-         if ("agents", "truncated") in state_tensordict.keys(include_nested=True):
-             # Fix: Use state_tensordict instead of next_state_tensordict
-             print(f"  ('agents', 'truncated') value: {state_tensordict.get(('agents', 'truncated'))}")
-         # Print batch key to verify its location
-         if ('agents', 'observation', 'batch') in state_tensordict.keys(include_nested=True):
-             print(f"  ('agents', 'observation', 'batch') value sample: {state_tensordict.get(('agents', 'observation', 'batch'))[0][:5]}...") # Print sample of batch tensor
-
-
-         print("-------------------------------------------")
-
-
-         return state_tensordict
-
-
-    def _set_seed(self, seed: Optional[int] = None) -> int:
-        if seed is None:
-             seed = torch.randint(0, 1000000, (1,)).item()
-        torch.manual_seed(seed)
-        np.random.seed(seed)
-        return seed
 
     def _is_terminal(self) -> torch.Tensor:
         return torch.zeros(self.num_envs, dtype=torch.bool, device=self.device)
