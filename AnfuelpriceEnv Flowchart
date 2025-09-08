@@ -1,0 +1,24 @@
+flowchart LR
+    A["Initialize AnFuelpriceEnv"] --> B{"_reset Called?"}
+    B -- Yes --> C["Select initial data index"]
+    B -- No --> D["Use current data index"]
+    C --> E["_get_state_at"]
+    D --> E
+    E --> F["Return initial observation TensorDict"]
+    F --> G["Agent selects action: tensordict agents action"]
+    G --> H["_step Called with action TensorDict"]
+    H --> I["Increment data index"]
+    I --> J["_is_terminal"] & K["Check if episode length reached"]
+    J --> L{"Is episode terminal?"}
+    K --> M{"Is episode truncated?"}
+    L --> N{"Episode ends: terminated or truncated"}
+    M --> N
+    N --> O["Calculate reward: _batch_reward"]
+    O --> P["_get_state_at for next state"]
+    P --> Q["Return next observation, reward, done flags TensorDict"]
+    Q --> R{"Episode Done?"}
+    R -- Yes --> S["Call _reset for next episode"]
+    R -- No --> G
+
+
+
