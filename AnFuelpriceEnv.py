@@ -622,7 +622,12 @@ class AnFuelpriceEnv(EnvBase):
 
         return initial_tensordict
 
-
+    def _set_seed(self, seed: Optional[int] = None) -> int:
+        if seed is None:
+             seed = torch.randint(0, 1000000, (1,)).item()
+        torch.manual_seed(seed)
+        np.random.seed(seed)
+        return seed
     def _is_terminal(self) -> torch.Tensor:
         return torch.zeros(self.num_envs, dtype=torch.bool, device=self.device)
 
