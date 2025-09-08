@@ -188,9 +188,9 @@ class FuelpriceenvfeatureGraph():
 
 
 class AnFuelpriceEnv(EnvBase):
-    def __init__(self, num_envs, seed, device, **kwargs):
+    def __init__(self, num_envs, seed, device, num_agents=13, **kwargs): # Added num_agents argument with default
         self.episode_length = kwargs.get('episode_length', 100)
-        self.num_agents = 13 # Keep as 13 based on original definition and feature count
+        self.num_agents = num_agents # Use the provided num_agents
         self.allow_repeat_data = kwargs.get('allow_repeat_data', False)
         self.num_envs = num_envs
         self.current_data_index = torch.zeros(num_envs, dtype=torch.int64, device=device)
@@ -208,8 +208,8 @@ class AnFuelpriceEnv(EnvBase):
         self.graph_generator._load_data()
         self.combined_data = self.graph_generator.combined_data
 
-        # Corrected num_agents to be consistent with __init__
-        self.num_agents = 13
+        # num_agents is now initialized from the constructor argument
+        # self.num_agents = num_agents # Removed redundant initialization
         self.num_individual_actions = 3 # Defined inside the class
         self.num_individual_actions_features = 13 # Still 13 action features per agent
 
@@ -226,17 +226,23 @@ class AnFuelpriceEnv(EnvBase):
         # If each node (agent) has a feature vector, define its dimension here.
         # Based on the data loading, the first 13 columns are features.
         # If each agent's node features are these 13 values, then node_feature_dim is 13.
+        # Assuming node feature dim is 1, as in the original code, but this might need revisit
+        # if each agent node represents one of the 13 features.
+        # Let's keep it as 1 for now, assuming each node feature is one value from the 13 columns.
         self.node_feature_dim = 1 # Changed to 1 assuming each node feature is a single value from the first 13 columns
 
         # Define obs_dim before using it
         # obs_dim is the dimension of the observation space for a single agent, or the relevant feature dimensions.
         # Given the structure, the first 13 columns seem to be the node features.
-        obs_dim = 13 # This is the number of node features per graph (which is num_agents)
+        # obs_dim = 13 # This is the number of node features per graph (which is num_agents)
+        # The observation spec should now reflect the variable number of agents.
+        # The shape of 'x' should be [num_envs, num_agents, node_feature_dim].
 
         # Re-calculate observation bounds based on the new node feature slicing
         # The observation bounds should be for the node features, which are the first 13 columns.
-        self.obs_min = torch.min(self.combined_data[:, :self.num_nodes_per_graph], dim=0)[0].unsqueeze(-1).to(self.device) # Corrected slicing
-        self.obs_max = torch.max(self.combined_data[:, :self.num_nodes_per_graph], dim=0)[0].unsqueeze(-1).to(self.device) # Corrected slicing
+        # These bounds are based on the full dataset, assuming the first 13 columns are the relevant features regardless of the number of agents.
+        self.obs_min = torch.min(self.combined_data[:, :13], dim=0)[0].unsqueeze(-1).to(self.device) # Still based on 13 features
+        self.obs_max = torch.max(self.combined_data[:, :13], dim=0)[0].unsqueeze(-1).to(self.device) # Still based on 13 features
 
 
         super().__init__(device=device, batch_size=[num_envs])
@@ -253,8 +259,8 @@ class AnFuelpriceEnv(EnvBase):
              {
                  # Define the keys for the current state
                  ("agents", "observation"): Composite({ # Nested under "agents"
-                     "x": Unbounded( # Node features [num_envs, num_nodes_per_graph, node_feature_dim]
-                         shape=torch.Size([self.num_envs, self.num_nodes_per_graph, self.node_feature_dim]),
+                     "x": Unbounded( # Node features [num_envs, num_agents, node_feature_dim]
+                         shape=torch.Size([self.num_envs, self.num_agents, self.node_feature_dim]),
                          dtype=torch.float32,
                          device=self.device
                      ),
@@ -264,13 +270,16 @@ class AnFuelpriceEnv(EnvBase):
                          device=self.device
                      ),
                      "graph_attributes": Unbounded( # Graph attributes [num_envs, graph_attr_dim]
-                          shape=torch.Size([self.num_envs, (26-13) + (39-26)]), # Assuming this is the graph attr dim
+                          # The graph attributes dimension should be based on the data, not the number of agents.
+                          # Assuming the graph attributes are columns 13 to 38 (26 columns).
+                          # The original code used (26-13) + (39-26) = 13 + 13 = 26. Let's keep this based on data structure.
+                          shape=torch.Size([self.num_envs, 26]), # Assuming this is the graph attr dim based on data
                           dtype=torch.float32,
                           device=self.device
                      ),
                       # Add 'batch' key to the observation spec
-                     "batch": Unbounded( # Batch tensor [num_envs, num_nodes_per_graph]
-                         shape=torch.Size([self.num_envs, self.num_nodes_per_graph]),
+                     "batch": Unbounded( # Batch tensor [num_envs, num_agents]
+                         shape=torch.Size([self.num_envs, self.num_agents]),
                          dtype=torch.int64,
                          device=self.device
                      ),
@@ -295,8 +304,8 @@ class AnFuelpriceEnv(EnvBase):
                  # Define the keys for the next state, nested under "next"
                  "next": Composite({
                       ("agents", "observation"): Composite({ # Nested under "agents"
-                          "x": Unbounded( # Node features [num_envs, num_nodes_per_graph, node_feature_dim]
-                              shape=torch.Size([self.num_envs, self.num_nodes_per_graph, self.node_feature_dim]),
+                          "x": Unbounded( # Node features [num_envs, num_agents, node_feature_dim]
+                              shape=torch.Size([self.num_envs, self.num_agents, self.node_feature_dim]),
                               dtype=torch.float32,
                               device=self.device
                           ),
@@ -306,13 +315,14 @@ class AnFuelpriceEnv(EnvBase):
                               device=self.device
                           ),
                           "graph_attributes": Unbounded( # Graph attributes [num_envs, graph_attr_dim]
-                               shape=torch.Size([self.num_envs, (26-13) + (39-26)]), # Assuming this is the graph attr dim
+                               # The graph attributes dimension should be based on the data, not the number of agents.
+                               shape=torch.Size([self.num_envs, 26]), # Assuming this is the graph attr dim based on data
                                dtype=torch.float32,
                                device=self.device
                           ),
                            # Add 'batch' key to the next observation spec
-                          "batch": Unbounded( # Batch tensor [num_envs, num_nodes_per_graph]
-                              shape=torch.Size([self.num_envs, self.num_nodes_per_graph]),
+                          "batch": Unbounded( # Batch tensor [num_envs, num_agents]
+                              shape=torch.Size([self.num_envs, self.num_agents]),
                               dtype=torch.int64,
                               device=self.device
                           ),
@@ -496,8 +506,8 @@ class AnFuelpriceEnv(EnvBase):
         # Add the batch key to the next observation
         # Create a batch tensor for the next state
         # The batch tensor should map each node to its environment index.
-        # Shape: [num_envs, num_nodes_per_graph]
-        batch_tensor = torch.arange(self.num_envs, device=self.device).unsqueeze(-1).repeat(1, self.num_nodes_per_graph)
+        # Shape: [num_envs, num_agents]
+        batch_tensor = torch.arange(self.num_envs, device=self.device).unsqueeze(-1).repeat(1, self.num_agents)
         next_state_tensordict.get(("agents", "observation"))["batch"] = batch_tensor
 
 
@@ -574,8 +584,8 @@ class AnFuelpriceEnv(EnvBase):
         # Add the batch key to the initial observation
         # Create a batch tensor for the initial state
         # The batch tensor should map each node to its environment index.
-        # Shape: [num_envs, num_nodes_per_graph]
-        batch_tensor = torch.arange(self.num_envs, device=self.device).unsqueeze(-1).repeat(1, self.num_nodes_per_graph)
+        # Shape: [num_envs, num_agents]
+        batch_tensor = torch.arange(self.num_envs, device=self.device).unsqueeze(-1).repeat(1, self.num_agents)
         initial_tensordict.get(("agents", "observation"))["batch"] = batch_tensor
 
 
@@ -620,19 +630,22 @@ class AnFuelpriceEnv(EnvBase):
          num_nodes_per_graph = self.num_nodes_per_graph # This is num_agents
          node_feature_dim = self.node_feature_dim # This is 1
          num_edges_per_graph = self.num_edges_per_graph # Based on graph structure among agents
-         graph_attr_dim = (26-13) + (39-26) # Assuming this is the graph attr dim
+         # The graph attributes dimension should be based on the data, not the number of agents.
+         # Assuming the graph attributes are columns 13 to 38 (26 columns).
+         graph_attr_dim = 26 # Assuming this is the graph attr dim based on data
+
 
          state_data_index = self.current_data_index[env_ids]
 
          out_of_bounds_mask = (state_data_index < 0) | (state_data_index >= self.combined_data.shape[0])
 
          # Initialize tensors for batched data (batch size is num_envs_subset)
-         # x: [num_envs_subset, num_nodes_per_graph, node_feature_dim]
+         # x: [num_envs_subset, num_agents, node_feature_dim]
          # edge_index: [num_envs_subset, 2, num_edges_per_graph]
          # graph_attributes: [num_envs_subset, graph_attr_dim]
          # global_reward_in_state: [num_envs_subset, num_agents, 1]
 
-         x_batch = torch.zeros(num_envs_subset, num_nodes_per_graph, node_feature_dim, device=self.device)
+         x_batch = torch.zeros(num_envs_subset, num_agents, node_feature_dim, device=self.device)
          edge_index_batch = torch.zeros(num_envs_subset, 2, num_edges_per_graph, dtype=torch.int64, device=self.device)
          graph_attributes_batch = torch.zeros(num_envs_subset, graph_attr_dim, device=self.device)
          # Removed initialization of global_reward_in_state
@@ -651,9 +664,20 @@ class AnFuelpriceEnv(EnvBase):
                      # Extract data for the current data_index
                      data_slice = self.combined_data[data_index_for_env.item()] # Shape [39]
 
-                     # Node features (x) - Shape [num_nodes_per_graph, node_feature_dim] = [num_agents, 1]
-                     # Assuming the first 13 values correspond to the 13 agents' node features.
-                     x = data_slice[0:13].unsqueeze(-1).to(self.device) # Shape [13, 1]
+                     # Node features (x) - Shape [num_agents, node_feature_dim] = [num_agents, 1]
+                     # Assuming the first 'num_agents' values correspond to the agents' node features.
+                     # This assumes the first 'num_agents' columns of the data are the node features.
+                     # If num_agents > 13, this will cause an index error.
+                     # We should instead use the first 13 columns, regardless of num_agents,
+                     # and potentially pad if num_agents > 13 or select a subset if num_agents < 13.
+                     # Let's assume the first 13 columns are the potential node features, and we select the first `num_agents` from these.
+                     if num_agents > 13:
+                          print(f"Warning: num_agents ({num_agents}) is greater than the number of available node features in data (13). Padding with zeros.")
+                          x = torch.zeros(num_agents, node_feature_dim, device=self.device)
+                          x[:13, :] = data_slice[0:13].unsqueeze(-1).to(self.device) # Use available data
+                     else:
+                          x = data_slice[0:num_agents].unsqueeze(-1).to(self.device) # Shape [num_agents, 1]
+
                      x_batch[env_idx_in_subset, :, :] = x # Assign directly
 
 
@@ -678,24 +702,17 @@ class AnFuelpriceEnv(EnvBase):
 
 
                      # Graph attributes (graph_attributes) - Shape [graph_attr_dim]
-                     graph_attributes_part1 = data_slice[13:26]
-                     graph_attributes_part2 = data_slice[26:39]
+                     # Assuming graph attributes are columns 13 to 38 (26 columns)
+                     graph_attributes = data_slice[13:39].to(self.device) # Shape [26]
+                     # Ensure graph_attributes has the correct dimension
+                     if graph_attributes.shape[0] != graph_attr_dim:
+                          print(f"Warning: Extracted graph attributes shape {graph_attributes.shape[0]} does not match expected graph_attr_dim {graph_attr_dim}. Padding/Truncating.")
+                          if graph_attributes.shape[0] < graph_attr_dim:
+                               graph_attributes = torch.cat([graph_attributes, torch.zeros(graph_attr_dim - graph_attributes.shape[0], device=self.device)])
+                          else:
+                               graph_attributes = graph_attributes[:graph_attr_dim]
 
-                     # Ensure slices are not empty before concatenating
-                     if graph_attributes_part1.numel() > 0 and graph_attributes_part2.numel() > 0:
-                          graph_attributes = torch.cat([graph_attributes_part1, graph_attributes_part2], dim=0).to(self.device)
-                     elif graph_attributes_part1.numel() > 0:
-                          graph_attributes = graph_attributes_part1.to(self.device)
-                          # Pad if needed to match graph_attr_dim
-                          if graph_attributes.shape[0] < graph_attr_dim:
-                              graph_attributes = torch.cat([graph_attributes, torch.zeros(graph_attr_dim - graph_attributes.shape[0], device=self.device)])
-                     elif graph_attributes_part2.numel() > 0:
-                          graph_attributes = graph_attributes_part2.to(self.device)
-                          # Pad if needed to match graph_attr_dim
-                          if graph_attributes.shape[0] < graph_attr_dim:
-                              graph_attributes = torch.cat([graph_attributes, torch.zeros(graph_attr_dim - graph_attributes.shape[0], device=self.device)])
-                     else:
-                          graph_attributes = torch.zeros(graph_attr_dim, device=self.device)
+                     graph_attributes_batch[env_idx_in_subset, :] = graph_attributes
 
 
                 except Exception as e:
@@ -729,8 +746,8 @@ class AnFuelpriceEnv(EnvBase):
                   "graph_attributes": graph_attributes_batch,
                   # Add 'batch' key here
                   # Create a batch tensor that maps nodes to environments
-                  # Shape: [num_envs_subset, num_nodes_per_graph]
-                  "batch": torch.arange(num_envs_subset, device=self.device).unsqueeze(-1).repeat(1, num_nodes_per_graph),
+                  # Shape: [num_envs_subset, num_agents]
+                  "batch": torch.arange(num_envs_subset, device=self.device).unsqueeze(-1).repeat(1, num_agents),
              }, batch_size=[num_envs_subset], device=self.device),
              # Removed global_reward_in_state from state tensordict construction
              # Added top-level done, terminated, truncated keys
@@ -826,6 +843,7 @@ class AnFuelpriceEnv(EnvBase):
             valid_data_indices_flat = data_indices_flat[valid_indices_flat] # Shape [num_valid_flat]
 
             # Get the returns for the valid data points
+            # Assuming returns are columns 13 to 25 (13 columns) in the combined data.
             returns_data_valid_flat = self.combined_data[valid_data_indices_flat][:, 13:26] # Shape [num_valid_flat, 13]
 
             # Extract actions from the input tensordict for valid data points and restructure them
@@ -883,10 +901,10 @@ class AnFuelpriceEnv(EnvBase):
                     # to the corresponding 13 return values for that step.
 
                     # returns_data_valid_flat shape: [num_valid_flat, 13] (returns for 13 agents)
-                    # actions_tensor_valid_flat shape: [num_valid_flat, 13, 13] (actions for 13 agents, each with 13 features)
+                    # actions_tensor_valid_flat shape: [num_valid_flat, num_agents, 13] (actions for num_agents, each with 13 features)
 
                     # We need to compare actions_tensor_valid_flat[:, j, i] with returns_data_valid_flat[:, i]
-                    # for each agent j (0 to 12) and each action feature/return i (0 to 12).
+                    # for each agent j (0 to num_agents-1) and each action feature/return i (0 to 12).
 
                     # Reshape returns_data_valid_flat for broadcasting: [num_valid_flat, 1, 13]
                     returns_broadcastable = returns_data_valid_flat.unsqueeze(1)
