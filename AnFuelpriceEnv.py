@@ -1,6 +1,7 @@
 # MultiCategorical Configuration
 #NO GRAPH ATTRIBUTES
 #change observation to data
+#Time stamp added
 
 import pandas as pd
 import os
