@@ -1,9 +1,11 @@
-from torchrl.collectors import SyncDataCollector
-from torchrl.envs import check_env_specs
 # MultiCategorical Configuration
 #NO GRAPH ATTRIBUTES
 #change observation to data
 #Timestamp added
+
+from torchrl.collectors import SyncDataCollector
+from torchrl.envs import check_env_specs
+
 
 import pandas as pd
 import os
