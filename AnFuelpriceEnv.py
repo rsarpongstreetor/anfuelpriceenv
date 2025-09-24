@@ -1,8 +1,3 @@
-# MultiCategorical Configuration
-#NO GRAPH ATTRIBUTES
-#change observation to data
-#Timestamp added
-
 from torchrl.collectors import SyncDataCollector
 from torchrl.envs import check_env_specs
 
