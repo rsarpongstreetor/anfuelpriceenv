@@ -748,22 +748,22 @@ class AnFuelpriceEnv(EnvBase):
 
 # Assuming AnFuelpriceEnv is now defined above in this cell
 # Instantiate the environment
-num_envs = 4 # You can adjust the number of environments
-seed = 0
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-try:
-    env = AnFuelpriceEnv(num_envs=num_envs, seed=seed, device=device, episode_length=10) # Reduced episode_length for a quick test
-    print("\nEnvironment instantiated successfully.")
-except Exception as e:
-    print(f"\nCould not re-instantiate env with correct batch size: {e}")
-    env = None
+#num_envs = 4 # You can adjust the number of environments
+#seed = 0
+#device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+#try:
+#    env = AnFuelpriceEnv(num_envs=num_envs, seed=seed, device=device, episode_length=10) # Reduced episode_length for a quick test
+#    print("\nEnvironment instantiated successfully.")
+#except Exception as e:
+#    print(f"\nCould not re-instantiate env with correct batch size: {e}")
+#    env = None
 
 
 # Check environment specs (if env is available)
-if env is not None:
-    print("\nChecking environment specs...")
+#if env is not None:
+#    print("\nChecking environment specs...")
     # check_env_specs(env) # Temporarily comment out check_env_specs
-    print("Skipping check_env_specs to proceed.")
+#    print("Skipping check_env_specs to proceed.")
 
 
 # Instantiate the collector without a policy (This part might be commented out or removed later)
