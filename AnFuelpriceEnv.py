@@ -1,5 +1,4 @@
-from torchrl.collectors import SyncDataCollector
-from torchrl.envs import check_env_specs
+
 
 
 import pandas as pd
